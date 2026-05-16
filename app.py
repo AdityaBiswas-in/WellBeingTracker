@@ -45,13 +45,14 @@ login_manager.login_view = 'login'
 login_manager.login_message = ''          # suppress default flash
 
 class User(UserMixin):
-    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None):
+    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None):
         self.id         = id_
         self.username   = username
         self.email      = email
         self.phone      = phone
         self.bio        = bio
         self.avatar_url = avatar_url
+        self.gender     = gender
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -60,7 +61,7 @@ def load_user(user_id):
     conn.close()
     if row:
         u = dict(row)
-        return User(u['id'], u['username'], u['email'], u.get('phone'), u.get('bio'), u.get('avatar_url'))
+        return User(u['id'], u['username'], u['email'], u.get('phone'), u.get('bio'), u.get('avatar_url'), u.get('gender'))
     return None
 
 # ─── Database Initialization ───────────────────────────────────────────────────
@@ -91,6 +92,9 @@ def init_db():
     except: pass
     try:
         c.execute('ALTER TABLE users ADD COLUMN avatar_url TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN gender TEXT')
     except: pass
 
     # Sessions table (scoped per user)
@@ -181,8 +185,9 @@ def signup():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm', '')
+        gender   = request.form.get('gender', '')
 
-        if not username or not email or not password:
+        if not username or not email or not password or not gender:
             error = 'All fields are required.'
         elif len(username) < 3:
             error = 'Username must be at least 3 characters.'
@@ -201,8 +206,8 @@ def signup():
             else:
                 hashed = generate_password_hash(password)
                 conn.execute(
-                    'INSERT INTO users (username, email, password) VALUES (?,?,?)',
-                    (username, email, hashed)
+                    'INSERT INTO users (username, email, password, gender) VALUES (?,?,?,?)',
+                    (username, email, hashed, gender)
                 )
                 conn.commit()
                 user_row = conn.execute(
@@ -260,7 +265,8 @@ def index():
                            email=current_user.email,
                            phone=current_user.phone or '',
                            bio=current_user.bio or '',
-                           avatar_url=current_user.avatar_url or '')
+                           avatar_url=current_user.avatar_url or '',
+                           gender=current_user.gender or '')
 
 
 @app.route('/api/user/update', methods=['POST'])
@@ -271,9 +277,10 @@ def update_user():
     new_email    = request.form.get('email', '').strip().lower()
     new_phone    = request.form.get('phone', '').strip()
     new_bio      = request.form.get('bio', '').strip()
+    new_gender   = request.form.get('gender', '').strip()
     
-    if not new_username or not new_email:
-        return jsonify({'error': 'Username and email are required'}), 400
+    if not new_username or not new_email or not new_gender:
+        return jsonify({'error': 'Username, email, and gender are required'}), 400
         
     avatar_url = current_user.avatar_url
     
@@ -290,8 +297,8 @@ def update_user():
     conn = get_db()
     try:
         conn.execute(
-            'UPDATE users SET username=?, email=?, phone=?, bio=?, avatar_url=? WHERE id=?',
-            (new_username, new_email, new_phone, new_bio, avatar_url, current_user.id)
+            'UPDATE users SET username=?, email=?, phone=?, bio=?, avatar_url=?, gender=? WHERE id=?',
+            (new_username, new_email, new_phone, new_bio, avatar_url, new_gender, current_user.id)
         )
         conn.commit()
     except sqlite3.IntegrityError:
@@ -305,6 +312,7 @@ def update_user():
     current_user.phone      = new_phone
     current_user.bio        = new_bio
     current_user.avatar_url = avatar_url
+    current_user.gender     = new_gender
     
     return jsonify({'success': True})
 

@@ -945,10 +945,11 @@ async function updateAccount() {
   const email    = document.getElementById('editEmail').value.trim();
   const phone    = document.getElementById('editPhone').value.trim();
   const bio      = document.getElementById('editBio').value.trim();
+  const gender   = document.getElementById('editGender').value;
   const avatar   = document.getElementById('editAvatar').files[0];
   
-  if (!username || !email) {
-    alert('Please fill in all fields.');
+  if (!username || !email || !gender) {
+    alert('Please fill in all mandatory fields, including gender.');
     return;
   }
   
@@ -957,6 +958,7 @@ async function updateAccount() {
   formData.append('email', email);
   formData.append('phone', phone);
   formData.append('bio', bio);
+  formData.append('gender', gender);
   if (avatar) {
     formData.append('avatar', avatar);
   }
