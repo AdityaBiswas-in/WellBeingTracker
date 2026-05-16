@@ -651,11 +651,40 @@ function requestNotifPermission() {
   });
 }
 
+// ── Play notification sound ───────────────────────────────────────
+function playNotificationSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+    osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1); // C6
+    
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.error("Audio playback failed", e);
+  }
+}
+
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (notifiedToday.has(appName.toLowerCase())) return;  // already notified
   notifiedToday.add(appName.toLowerCase());
+
+  playNotificationSound();
 
   new Notification(`⏰ Time limit reached: ${appName}`, {
     body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
