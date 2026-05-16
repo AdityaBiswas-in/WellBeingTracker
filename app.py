@@ -15,6 +15,10 @@ import secrets
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER = os.path.join('static', 'uploads', 'avatars')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # ─── Secret key (stable across restarts) ──────────────────────────────────────
 SECRET_KEY_FILE = os.path.join(os.path.dirname(__file__), '.secret_key')
 if os.path.exists(SECRET_KEY_FILE):
@@ -41,10 +45,13 @@ login_manager.login_view = 'login'
 login_manager.login_message = ''          # suppress default flash
 
 class User(UserMixin):
-    def __init__(self, id_, username, email):
-        self.id       = id_
-        self.username = username
-        self.email    = email
+    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None):
+        self.id         = id_
+        self.username   = username
+        self.email      = email
+        self.phone      = phone
+        self.bio        = bio
+        self.avatar_url = avatar_url
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -52,7 +59,8 @@ def load_user(user_id):
     row  = conn.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
     conn.close()
     if row:
-        return User(row['id'], row['username'], row['email'])
+        u = dict(row)
+        return User(u['id'], u['username'], u['email'], u.get('phone'), u.get('bio'), u.get('avatar_url'))
     return None
 
 # ─── Database Initialization ───────────────────────────────────────────────────
@@ -67,9 +75,23 @@ def init_db():
             username    TEXT    NOT NULL UNIQUE,
             email       TEXT    NOT NULL UNIQUE,
             password    TEXT    NOT NULL,
+            phone       TEXT,
+            bio         TEXT,
+            avatar_url  TEXT,
             created_at  TEXT    DEFAULT (datetime('now'))
         )
     ''')
+
+    # Migration for existing users
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN phone TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN bio TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN avatar_url TEXT')
+    except: pass
 
     # Sessions table (scoped per user)
     c.execute('''
@@ -233,7 +255,58 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', username=current_user.username)
+    return render_template('index.html', 
+                           username=current_user.username,
+                           email=current_user.email,
+                           phone=current_user.phone or '',
+                           bio=current_user.bio or '',
+                           avatar_url=current_user.avatar_url or '')
+
+
+@app.route('/api/user/update', methods=['POST'])
+@login_required
+def update_user():
+    # Use form data instead of JSON to handle file uploads
+    new_username = request.form.get('username', '').strip()
+    new_email    = request.form.get('email', '').strip().lower()
+    new_phone    = request.form.get('phone', '').strip()
+    new_bio      = request.form.get('bio', '').strip()
+    
+    if not new_username or not new_email:
+        return jsonify({'error': 'Username and email are required'}), 400
+        
+    avatar_url = current_user.avatar_url
+    
+    if 'avatar' in request.files:
+        file = request.files['avatar']
+        if file and file.filename != '':
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            if ext in ['jpg', 'jpeg', 'png', 'gif']:
+                filename = f"avatar_{current_user.id}_{secrets.token_hex(4)}.{ext}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                avatar_url = f"/static/uploads/avatars/{filename}"
+        
+    conn = get_db()
+    try:
+        conn.execute(
+            'UPDATE users SET username=?, email=?, phone=?, bio=?, avatar_url=? WHERE id=?',
+            (new_username, new_email, new_phone, new_bio, avatar_url, current_user.id)
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username or email already exists'}), 400
+    finally:
+        conn.close()
+        
+    # Update session
+    current_user.username   = new_username
+    current_user.email      = new_email
+    current_user.phone      = new_phone
+    current_user.bio        = new_bio
+    current_user.avatar_url = avatar_url
+    
+    return jsonify({'success': True})
 
 
 @app.route('/api/sessions', methods=['POST'])
@@ -313,10 +386,15 @@ def daily_report():
 @app.route('/api/weekly', methods=['GET'])
 @login_required
 def weekly_report():
+    days    = request.args.get('days', 7, type=int)
     today   = date.today()
     results = []
     conn    = get_db()
-    for i in range(6, -1, -1):
+    
+    # Limit maximum days to 365 for safety
+    days = min(max(days, 1), 365)
+    
+    for i in range(days - 1, -1, -1):
         d    = (today - timedelta(days=i)).isoformat()
         rows = conn.execute(
             'SELECT category, SUM(minutes) as total FROM sessions WHERE user_id=? AND date=? GROUP BY category',
@@ -329,9 +407,19 @@ def weekly_report():
         work         = cats.get('work', 0)
         other        = cats.get('other', 0)
         total        = study + entertainment + social + work + other
+        
+        # Format label based on range
+        dt = datetime.strptime(d, '%Y-%m-%d')
+        if days <= 7:
+            label = dt.strftime('%a')
+        elif days <= 90:
+            label = dt.strftime('%b %d')
+        else:
+            label = dt.strftime('%b %y')
+            
         results.append({
             'date': d,
-            'label': datetime.strptime(d, '%Y-%m-%d').strftime('%a'),
+            'label': label,
             'total': total, 'study': study,
             'entertainment': entertainment, 'social': social,
             'work': work, 'other': other,

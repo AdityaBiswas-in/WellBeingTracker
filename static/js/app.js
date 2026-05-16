@@ -11,9 +11,37 @@ const CAT_COLORS = {
   other:         '#b39ddb',
 };
 
+// ── Theme Toggle ───────────────────────────────────────────────
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+
+  // Force a re-render of current charts and particles to grab new colors
+  loadDashboard();
+  loadWeekly(currentWeeklyRange);
+}
+
+// Load saved theme immediately to prevent flashing
+(function loadTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+    });
+  }
+})();
+
 // ── Chart instances ───────────────────────────────────────────
 let doughnutChart = null;
 let weeklyChart   = null;
+let currentWeeklyRange = 7;
 
 // ── Eye-care timer ────────────────────────────────────────────
 let eyeInterval   = null;
@@ -49,11 +77,14 @@ let eyeActive     = false;
   }
 
   function draw() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const rgb = isLight ? '0,162,255' : '0,230,118';
+
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0,230,118,${p.a})`;
+      ctx.fillStyle = `rgba(${rgb},${p.a})`;
       ctx.fill();
 
       p.x += p.vx; p.y += p.vy;
@@ -71,7 +102,7 @@ let eyeActive     = false;
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = `rgba(0,230,118,${0.06 * (1 - dist / 100)})`;
+          ctx.strokeStyle = `rgba(${rgb},${0.06 * (1 - dist / 100)})`;
           ctx.lineWidth   = 0.6;
           ctx.stroke();
         }
@@ -125,8 +156,9 @@ function fmtMin(minutes) {
 }
 
 function scoreColor(score) {
-  if (score >= 80) return '#00e676';
-  if (score >= 60) return '#69f0ae';
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (score >= 80) return isLight ? '#007acc' : '#00e676';
+  if (score >= 60) return isLight ? '#00a2ff' : '#69f0ae';
   if (score >= 40) return '#ffd740';
   return '#ff6e40';
 }
@@ -206,9 +238,11 @@ function updateScoreRing(score) {
   const offset = circumference - (score / 100) * circumference;
   const color  = scoreColor(score);
 
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
   fillEl.style.strokeDashoffset = offset;
   fillEl.style.stroke           = color;
-  fillEl.style.filter           = `drop-shadow(0 0 8px ${color})`;
+  fillEl.style.filter           = isLight ? `drop-shadow(0 2px 4px rgba(0, 122, 204, 0.3))` : `drop-shadow(0 0 8px ${color})`;
 
   animateValue(scoreNumEl, parseInt(scoreNumEl.textContent) || 0, score);
   subtitleEl.textContent = scoreSubtitleText(score);
@@ -478,17 +512,33 @@ async function logEyeBreak() {
 // ══════════════════════════════════════════════════════════════
 // WEEKLY
 // ══════════════════════════════════════════════════════════════
-async function loadWeekly() {
-  const res  = await fetch('/api/weekly');
+async function loadWeekly(days = currentWeeklyRange) {
+  currentWeeklyRange = days;
+  const title = document.getElementById('weeklyTitle');
+  if (title) {
+    if (days === 365) title.textContent = '1-Year Overview';
+    else title.textContent = `${days}-Day Overview`;
+  }
+  
+  const res  = await fetch(`/api/weekly?days=${days}`);
   const data = await res.json();
 
   renderWeeklyChart(data);
   renderWeeklyScores(data);
 }
 
+function loadWeeklyStats(days) {
+  loadWeekly(parseInt(days));
+}
+
 function renderWeeklyChart(data) {
   const ctx = document.getElementById('weeklyChart').getContext('2d');
   if (weeklyChart) weeklyChart.destroy();
+
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const gridColor = isLight ? 'rgba(0,162,255,.08)' : 'rgba(0,230,118,.06)';
+  const tickColor = isLight ? '#57799c' : '#4a7c59';
+  const legendColor = isLight ? '#2b445e' : '#a5d6a7';
 
   weeklyChart = new Chart(ctx, {
     type: 'bar',
@@ -507,14 +557,14 @@ function renderWeeklyChart(data) {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          labels: { color: '#a5d6a7', font: { size: 12 }, boxWidth: 14, boxHeight: 14 },
+          labels: { color: legendColor, font: { size: 12 }, boxWidth: 14, boxHeight: 14 },
           position: 'bottom',
         },
         tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtMin(ctx.raw)}` } },
       },
       scales: {
-        x: { stacked: true, grid: { color: 'rgba(0,230,118,.06)' }, ticks: { color: '#4a7c59' } },
-        y: { stacked: true, grid: { color: 'rgba(0,230,118,.06)' }, ticks: { color: '#4a7c59', callback: v => fmtMin(v) } },
+        x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } },
+        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, callback: v => fmtMin(v) } },
       },
       animation: { duration: 900, easing: 'easeOutQuart' },
     },
@@ -685,6 +735,9 @@ function sendNotification(appName, usedMin, limitMin) {
   notifiedToday.add(appName.toLowerCase());
 
   playNotificationSound();
+  
+  // Also show the pop-in instructor
+  showInstructor(`You've reached your limit for ${appName}! Time to take a break. 🌿`, 8000);
 
   new Notification(`⏰ Time limit reached: ${appName}`, {
     body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
@@ -820,3 +873,169 @@ async function checkAndNotify() {
   } catch { /* silently ignore network errors */ }
 }
 
+// ══════════════════════════════════════════════════════════════
+// POP-IN INSTRUCTOR
+// ══════════════════════════════════════════════════════════════
+const INSTRUCTOR_MESSAGES = [
+  "Welcome! I'm here to help you maintain your WellBeingTracker! ✨",
+  "Use the Dashboard to see your WellBeing Score. Aim for 80 or higher! 📈",
+  "Don't forget to log your study and entertainment sessions. 📚",
+  "The 20-20-20 rule is great for eye care. I'll remind you to take breaks! 👁️",
+  "You can set Time Limits for any app. I'll pop up if you go over! ⏰",
+  "Check out the Habits tab for some daily wellness tips! 🌿",
+  "Having a diverse set of activities boosts your WellBeing Score. Try something new! 🎨",
+];
+let messageIndex = 0;
+
+let instructorTimeout = null;
+
+function showInstructor(message, duration = 6000) {
+  const container = document.getElementById('instructor-container');
+  const msgEl = document.getElementById('instructor-message');
+  const bubble = document.getElementById('instructor-bubble');
+  
+  if (!container || !msgEl || !bubble) return;
+  
+  // If a specific message is provided, use it. Otherwise, cycle through the info messages.
+  if (message) {
+    msgEl.textContent = message;
+  } else {
+    msgEl.textContent = INSTRUCTOR_MESSAGES[messageIndex];
+    messageIndex = (messageIndex + 1) % INSTRUCTOR_MESSAGES.length;
+  }
+  
+  // Ensure the character stays visible
+  container.classList.remove('instructor-hidden');
+  container.classList.add('instructor-visible');
+  
+  // Show the bubble
+  bubble.classList.add('bubble-visible');
+  
+  // Reset the timeout so clicking it again keeps it open
+  if (instructorTimeout) clearTimeout(instructorTimeout);
+  
+  instructorTimeout = setTimeout(() => {
+    bubble.classList.remove('bubble-visible');
+  }, duration);
+}
+
+// ══════════════════════════════════════════════════════════════
+// USER DROPDOWN & ACCOUNT
+// ══════════════════════════════════════════════════════════════
+function toggleUserDropdown() {
+  const menu = document.getElementById('userDropdownMenu');
+  const btn  = document.getElementById('userDropdownTrigger');
+  if (!menu || !btn) return;
+  
+  const isActive = menu.classList.toggle('active');
+  btn.setAttribute('aria-expanded', isActive);
+}
+
+function openEditAccountModal() {
+  document.getElementById('userDropdownMenu').classList.remove('active');
+  document.getElementById('editAccountModal').classList.add('active');
+}
+
+function closeEditAccountModal() {
+  document.getElementById('editAccountModal').classList.remove('active');
+}
+
+async function updateAccount() {
+  const username = document.getElementById('editUsername').value.trim();
+  const email    = document.getElementById('editEmail').value.trim();
+  const phone    = document.getElementById('editPhone').value.trim();
+  const bio      = document.getElementById('editBio').value.trim();
+  const avatar   = document.getElementById('editAvatar').files[0];
+  
+  if (!username || !email) {
+    alert('Please fill in all fields.');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('email', email);
+  formData.append('phone', phone);
+  formData.append('bio', bio);
+  if (avatar) {
+    formData.append('avatar', avatar);
+  }
+  
+  try {
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Update failed');
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+  }
+}
+
+function handleImagePreview(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const previewContainer = document.getElementById('modalAvatarPreview');
+      let previewImg = document.getElementById('previewImg');
+      
+      if (!previewImg) {
+        // Replace initials with a new image element
+        const initials = document.getElementById('previewInitials');
+        if (initials) initials.remove();
+        
+        previewImg = document.createElement('img');
+        previewImg.id = 'previewImg';
+        previewImg.className = 'avatar-img';
+        previewContainer.appendChild(previewImg);
+      }
+      
+      previewImg.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Global click listener for dropdowns
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('userDropdownMenu');
+  const btn  = document.getElementById('userDropdownTrigger');
+  if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.remove('active');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+// Welcome the user and set up click listeners
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    showInstructor();
+  }, 1000);
+
+  const container = document.getElementById('instructor-container');
+  if (container) {
+    container.style.cursor = 'pointer';
+    container.addEventListener('click', (e) => {
+      // Prevent the global click listener from immediately catching this
+      e.stopPropagation();
+      showInstructor();
+    });
+  }
+
+  // Hide the bubble if the user clicks anywhere else
+  document.addEventListener('click', (e) => {
+    if (container && !container.contains(e.target)) {
+      const bubble = document.getElementById('instructor-bubble');
+      if (bubble && bubble.classList.contains('bubble-visible')) {
+        bubble.classList.remove('bubble-visible');
+        if (instructorTimeout) clearTimeout(instructorTimeout);
+      }
+    }
+  });
+});

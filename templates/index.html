@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Digital Well-Being Tracker – monitor screen time, study vs entertainment ratio, eye-care reminders and your Digital Balance Score." />
-  <title>Digital Well-Being Tracker</title>
+  <title>WellBeingTracker</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
 
   <!-- Google Fonts -->
@@ -24,8 +24,9 @@
   <!-- ░░░ NAV ░░░ -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="nav-logo">
-      <img src="https://res.cloudinary.com/dhrjq4xgv/image/upload/v1778786024/ChatGPT_Image_May_15_2026_12_41_56_AM_weozi7.png" alt="Logo" class="logo-img" style="height: 36px; width: 36px; border-radius: 8px; margin-right: 12px; box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); object-fit: cover;" />
-      <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
+      <a href="/" style="text-decoration: none; color: inherit; cursor: pointer;" title="Go to Dashboard">
+        <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
+      </a>
     </div>
     <div class="nav-tabs" role="tablist">
       <button class="nav-tab active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="section-dashboard" onclick="switchTab('dashboard')">
@@ -46,8 +47,43 @@
     </div>
     <div class="nav-date" id="currentDateTime" aria-label="Current date and time"></div>
     <div class="nav-user">
-      <span class="nav-username" title="Logged in as {{ username }}">👤 {{ username }}</span>
-      <a href="/logout" class="btn-logout" aria-label="Sign out">Sign Out</a>
+      <button id="themeToggleBtn" aria-label="Toggle Light/Dark Mode" onclick="toggleTheme()" class="theme-toggle" title="Toggle Theme">☀️</button>
+      
+      <div class="user-dropdown-wrap">
+        <button class="user-avatar-btn" id="userDropdownTrigger" onclick="toggleUserDropdown()" aria-haspopup="true" aria-expanded="false" title="Account Menu">
+          <div class="user-avatar">
+            {% if avatar_url %}
+              <img src="{{ avatar_url }}" alt="Profile" class="avatar-img">
+            {% else %}
+              {{ username[0]|upper }}
+            {% endif %}
+          </div>
+        </button>
+        
+        <div class="user-dropdown-menu" id="userDropdownMenu">
+          <div class="dropdown-header">
+            <div class="user-avatar big">
+              {% if avatar_url %}
+                <img src="{{ avatar_url }}" alt="Profile" class="avatar-img">
+              {% else %}
+                {{ username[0]|upper }}
+              {% endif %}
+            </div>
+            <div class="dropdown-user-info">
+              <span class="dropdown-username">{{ username }}</span>
+              <span class="dropdown-email">{{ email }}</span>
+              {% if phone %}<span class="dropdown-sub">📱 {{ phone }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" onclick="openEditAccountModal()">
+            <span class="item-icon">⚙️</span> Edit Profile
+          </button>
+          <a href="/logout" class="dropdown-item logout-item">
+            <span class="item-icon">🚪</span> Sign Out
+          </a>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -235,7 +271,15 @@
     <!-- ═══════════════════════════ WEEKLY ═══════════════════════════ -->
     <section class="tab-section" id="section-weekly" role="tabpanel" aria-labelledby="tab-weekly">
       <div class="glass-card weekly-card">
-        <h2 class="section-title">7-Day Overview</h2>
+        <div class="weekly-header">
+          <h2 class="section-title" id="weeklyTitle">7-Day Overview</h2>
+          <select id="weeklyRange" class="date-input" onchange="loadWeeklyStats(this.value)" aria-label="Select report range">
+            <option value="7">Last 7 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="90">Last 90 Days</option>
+            <option value="365">Last Year</option>
+          </select>
+        </div>
 
         <div class="weekly-bar-wrap">
           <canvas id="weeklyChart" aria-label="Weekly screen time bar chart"></canvas>
@@ -366,6 +410,53 @@
 
   </main>
 
+  <!-- ░░░ EDIT ACCOUNT MODAL ░░░ -->
+  <div class="modal-overlay" id="editAccountModal" role="dialog" aria-modal="true" aria-labelledby="editProfileTitle">
+    <div class="edit-modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="editProfileTitle">Edit Profile</h2>
+        <p class="modal-desc">Update your account information below.</p>
+      </div>
+      <div class="log-form">
+        <div class="edit-avatar-section">
+          <div class="avatar-preview-container" onclick="document.getElementById('editAvatar').click()">
+            <div class="user-avatar big" id="modalAvatarPreview">
+              {% if avatar_url %}
+                <img src="{{ avatar_url }}" alt="Preview" class="avatar-img" id="previewImg">
+              {% else %}
+                <span id="previewInitials">{{ username[0]|upper }}</span>
+              {% endif %}
+            </div>
+            <div class="avatar-edit-overlay">
+              <span>📸</span>
+            </div>
+          </div>
+          <input type="file" id="editAvatar" accept="image/*" style="display: none;" onchange="handleImagePreview(this)">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editUsername">Username</label>
+          <input type="text" id="editUsername" class="date-input" value="{{ username }}" placeholder="Username" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editEmail">Email Address</label>
+          <input type="email" id="editEmail" class="date-input" value="{{ email }}" placeholder="email@example.com" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editPhone">Mobile Number</label>
+          <input type="tel" id="editPhone" class="date-input" value="{{ phone }}" placeholder="+91 98765 43210" style="width: 100%;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="editBio">Bio</label>
+          <textarea id="editBio" class="date-input" placeholder="Tell us a bit about yourself..." style="width: 100%; min-height: 80px; resize: vertical; font-family: inherit;">{{ bio }}</textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline btn-flex" onclick="closeEditAccountModal()">Cancel</button>
+          <button class="btn-green btn-flex" onclick="updateAccount()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ░░░ EYE CARE MODAL ░░░ -->
   <div class="modal-overlay" id="eyeModal" role="dialog" aria-modal="true" aria-labelledby="eyeModalTitle">
     <div class="modal glass-card">
@@ -374,6 +465,14 @@
       <p>Look at something <strong>20 feet away</strong> for <strong>20 seconds</strong>.<br/>Let your eyes relax and breathe.</p>
       <button class="btn-green btn-lg" onclick="closeEyeModal()" aria-label="Acknowledge eye break">✔ Done – Feeling Better!</button>
     </div>
+  </div>
+
+  <!-- ░░░ POP-IN INSTRUCTOR ░░░ -->
+  <div id="instructor-container" class="instructor-hidden">
+    <div class="speech-bubble" id="instructor-bubble">
+      <p id="instructor-message">Hello! I'm here to help you maintain your digital balance.</p>
+    </div>
+    <img src="{{ url_for('static', filename='instructor.png') }}" alt="Instructor" class="instructor-image">
   </div>
 
   <script src="{{ url_for('static', filename='js/app.js') }}?v=1.1"></script>
