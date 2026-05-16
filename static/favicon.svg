@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9d4edd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Lightning bolt / S shape -->
+  <path d="M 30 15 
+           L 80 15 
+           L 55 45 
+           L 85 45 
+           L 25 90 
+           L 45 55 
+           L 15 55 Z" 
+        fill="url(#grad1)" 
+        stroke-width="0" />
+</svg>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Digital Well-Being Tracker – monitor screen time, study vs entertainment ratio, eye-care reminders and your Digital Balance Score." />
+  <title>Digital Well-Being Tracker</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- ░░░ PARTICLE BACKGROUND ░░░ -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- ░░░ NAV ░░░ -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="nav-logo">
+      <img src="https://res.cloudinary.com/dhrjq4xgv/image/upload/v1778786024/ChatGPT_Image_May_15_2026_12_41_56_AM_weozi7.png" alt="Logo" class="logo-img" style="height: 36px; width: 36px; border-radius: 8px; margin-right: 12px; box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); object-fit: cover;" />
+      <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
+    </div>
+    <div class="nav-tabs" role="tablist">
+      <button class="nav-tab active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="section-dashboard" onclick="switchTab('dashboard')">
+        <span class="tab-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-tab" id="tab-log" role="tab" aria-selected="false" aria-controls="section-log" onclick="switchTab('log')">
+        <span class="tab-icon">➕</span> Log Time
+      </button>
+      <button class="nav-tab" id="tab-weekly" role="tab" aria-selected="false" aria-controls="section-weekly" onclick="switchTab('weekly')">
+        <span class="tab-icon">📅</span> Weekly
+      </button>
+      <button class="nav-tab" id="tab-habits" role="tab" aria-selected="false" aria-controls="section-habits" onclick="switchTab('habits')">
+        <span class="tab-icon">🌿</span> Habits
+      </button>
+      <button class="nav-tab" id="tab-limits" role="tab" aria-selected="false" aria-controls="section-limits" onclick="switchTab('limits')">
+        <span class="tab-icon">⏰</span> Limits
+      </button>
+    </div>
+    <div class="nav-date" id="currentDateTime" aria-label="Current date and time"></div>
+    <div class="nav-user">
+      <span class="nav-username" title="Logged in as {{ username }}">👤 {{ username }}</span>
+      <a href="/logout" class="btn-logout" aria-label="Sign out">Sign Out</a>
+    </div>
+  </nav>
+
+  <!-- ░░░ MAIN ░░░ -->
+  <main class="main-container" role="main">
+
+    <!-- ═══════════════════════════ DASHBOARD ═══════════════════════════ -->
+    <section class="tab-section active" id="section-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+
+      <!-- Score Hero -->
+      <div class="score-hero">
+        <div class="score-card glass-card">
+          <div class="score-ring-wrap">
+            <svg class="score-ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-bg"    cx="60" cy="60" r="50"/>
+              <circle class="ring-fill"  cx="60" cy="60" r="50" id="scoreRingFill"/>
+            </svg>
+            <div class="score-inner">
+              <span class="score-num" id="scoreNum">--</span>
+              <span class="score-label">Balance Score</span>
+            </div>
+          </div>
+          <div class="score-meta">
+            <p class="score-subtitle" id="scoreSubtitle">Loading…</p>
+            <div class="score-badge" id="scoreBadge">—</div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+          <div class="stat-card glass-card" id="stat-total">
+            <div class="stat-icon">🕐</div>
+            <div class="stat-body">
+              <span class="stat-val" id="statTotal">0h 0m</span>
+              <span class="stat-name">Total Screen Time</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-study">
+            <div class="stat-icon">📚</div>
+            <div class="stat-body">
+              <span class="stat-val" id="statStudy">0h 0m</span>
+              <span class="stat-name">Study Time</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-ent">
+            <div class="stat-icon">🎮</div>
+            <div class="stat-body">
+              <span class="stat-val" id="statEnt">0h 0m</span>
+              <span class="stat-name">Entertainment</span>
+            </div>
+          </div>
+          <div class="stat-card glass-card" id="stat-eye">
+            <div class="stat-icon">👁️</div>
+            <div class="stat-body">
+              <span class="stat-val" id="statEye">0</span>
+              <span class="stat-name">Eye Breaks Today</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart + Sessions Row -->
+      <div class="charts-row">
+        <!-- Doughnut -->
+        <div class="chart-card glass-card">
+          <h2 class="card-title">Today's Breakdown</h2>
+          <div class="chart-wrap">
+            <canvas id="doughnutChart" aria-label="Category breakdown pie chart"></canvas>
+          </div>
+          <div class="chart-legend" id="doughnutLegend"></div>
+        </div>
+
+        <!-- Ratio Bar -->
+        <div class="chart-card glass-card">
+          <h2 class="card-title">Study vs Entertainment</h2>
+          <div class="ratio-section">
+            <div class="ratio-labels">
+              <span class="ratio-lbl study">📚 Study</span>
+              <span class="ratio-lbl ent">🎮 Entertainment</span>
+            </div>
+            <div class="ratio-bar-track" role="progressbar" aria-label="Study to entertainment ratio">
+              <div class="ratio-bar-fill" id="ratioFill"></div>
+            </div>
+            <div class="ratio-pcts">
+              <span id="ratioStudyPct">0%</span>
+              <span id="ratioEntPct">0%</span>
+            </div>
+          </div>
+          <div class="balance-tip glass-card-inner" id="balanceTip">
+            <span class="tip-icon">💡</span>
+            <span id="balanceTipText">Log your sessions to get personalised tips!</span>
+          </div>
+
+          <!-- Eye-Care Reminder -->
+          <div class="eye-care-panel">
+            <h3 class="eye-care-title">👁️ Eye-Care 20-20-20 Rule</h3>
+            <p class="eye-care-desc">Every <strong>20 minutes</strong>, look at something <strong>20 feet</strong> away for <strong>20 seconds</strong>.</p>
+            <div class="eye-care-timer">
+              <span id="eyeCountdown" class="countdown">20:00</span>
+              <div class="eye-btns">
+                <button class="btn-green" id="btnEyeStart" onclick="startEyeTimer()" aria-label="Start eye care timer">Start Timer</button>
+                <button class="btn-outline" id="btnEyeDone" onclick="logEyeBreak()" aria-label="Mark eye break done" disabled>✔ Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Sessions -->
+      <div class="sessions-section glass-card">
+        <div class="sessions-header">
+          <h2 class="card-title">Today's Sessions</h2>
+          <input type="date" id="dashDate" class="date-input" aria-label="Select date" onchange="loadDashboard(this.value)" />
+        </div>
+        <div class="sessions-list" id="sessionsList">
+          <div class="empty-state">
+            <span>🌱</span>
+            <p>No sessions logged yet. Start tracking!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════ LOG TIME ═══════════════════════════ -->
+    <section class="tab-section" id="section-log" role="tabpanel" aria-labelledby="tab-log">
+      <div class="log-hero glass-card">
+        <h2 class="section-title">Log Screen Time</h2>
+        <p class="section-desc">Record what you spent your time on. Honest tracking leads to better habits.</p>
+
+        <form id="logForm" class="log-form" onsubmit="submitSession(event)" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="appName" class="form-label">App / Activity</label>
+              <input type="text" id="appName" name="appName" class="form-input" placeholder="e.g. YouTube, Reading, Coding…" required aria-required="true" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="category" class="form-label">Category</label>
+              <select id="category" name="category" class="form-input" required aria-required="true">
+                <option value="" disabled selected>Select category…</option>
+                <option value="study">📚 Study</option>
+                <option value="entertainment">🎮 Entertainment</option>
+                <option value="social">💬 Social Media</option>
+                <option value="work">💼 Work</option>
+                <option value="other">🔲 Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="hours" class="form-label">Hours</label>
+              <input type="number" id="hours" name="hours" class="form-input" placeholder="0" min="0" max="24" value="0" aria-label="Hours spent" />
+            </div>
+            <div class="form-group">
+              <label for="minutes" class="form-label">Minutes</label>
+              <input type="number" id="minutes" name="minutes" class="form-input" placeholder="30" min="0" max="59" value="30" aria-label="Minutes spent" />
+            </div>
+          </div>
+
+          <div id="formError" class="form-error" role="alert" aria-live="polite"></div>
+
+          <button type="submit" class="btn-green btn-lg" id="submitBtn" aria-label="Log this session">
+            <span class="btn-icon">➕</span> Log Session
+          </button>
+        </form>
+
+        <!-- Quick Presets -->
+        <div class="presets">
+          <p class="presets-label">Quick Add:</p>
+          <div class="preset-chips">
+            <button class="chip" onclick="preset('YouTube', 'entertainment', 30)" aria-label="Add 30 minutes YouTube">▶ YouTube 30m</button>
+            <button class="chip" onclick="preset('Reading', 'study', 45)" aria-label="Add 45 minutes reading">📖 Reading 45m</button>
+            <button class="chip" onclick="preset('Instagram', 'social', 20)" aria-label="Add 20 minutes Instagram">📸 Instagram 20m</button>
+            <button class="chip" onclick="preset('Coding', 'study', 60)" aria-label="Add 60 minutes coding">💻 Coding 1h</button>
+            <button class="chip" onclick="preset('Gaming', 'entertainment', 60)" aria-label="Add 60 minutes gaming">🎮 Gaming 1h</button>
+            <button class="chip" onclick="preset('Zoom / Meet', 'work', 60)" aria-label="Add 60 minutes Zoom">📹 Zoom 1h</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Toast -->
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+
+    <!-- ═══════════════════════════ WEEKLY ═══════════════════════════ -->
+    <section class="tab-section" id="section-weekly" role="tabpanel" aria-labelledby="tab-weekly">
+      <div class="glass-card weekly-card">
+        <h2 class="section-title">7-Day Overview</h2>
+
+        <div class="weekly-bar-wrap">
+          <canvas id="weeklyChart" aria-label="Weekly screen time bar chart"></canvas>
+        </div>
+
+        <div class="weekly-scores" id="weeklyScores"></div>
+
+        <!-- Score Legend -->
+        <div class="score-legend glass-card-inner">
+          <h3 class="legend-title">Digital Balance Score Key</h3>
+          <div class="legend-items">
+            <div class="legend-item"><span class="legend-dot legend-dot--excellent"></span>80–100 · Excellent</div>
+            <div class="legend-item"><span class="legend-dot legend-dot--good"></span>60–79 · Good</div>
+            <div class="legend-item"><span class="legend-dot legend-dot--fair"></span>40–59 · Fair</div>
+            <div class="legend-item"><span class="legend-dot legend-dot--poor"></span>0–39 · Needs Work</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════ HABITS ═══════════════════════════ -->
+    <section class="tab-section" id="section-habits" role="tabpanel" aria-labelledby="tab-habits">
+      <div class="habits-grid">
+
+        <!-- Ethical Principles -->
+        <div class="glass-card habit-card">
+          <h2 class="section-title">🧘 Ethical Principles</h2>
+          <div class="principle-list">
+            <div class="principle-item">
+              <div class="principle-icon">🎯</div>
+              <div class="principle-body">
+                <h3>Self-Discipline</h3>
+                <p>Set intentional limits on entertainment. Use "Do Not Disturb" windows for focused study.</p>
+              </div>
+            </div>
+            <div class="principle-item">
+              <div class="principle-icon">🧠</div>
+              <div class="principle-body">
+                <h3>Mental Harmony</h3>
+                <p>Balance screen time with offline activities: journaling, walks, and mindful breaks.</p>
+              </div>
+            </div>
+            <div class="principle-item">
+              <div class="principle-icon">🌐</div>
+              <div class="principle-body">
+                <h3>Responsible Tech Use</h3>
+                <p>Be conscious of algorithm-driven content. Choose purposeful content over passive scrolling.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Healthy Habits Checklist -->
+        <div class="glass-card habit-card">
+          <h2 class="section-title">✅ Daily Habits Checklist</h2>
+          <div class="checklist" id="habitChecklist"></div>
+        </div>
+
+        <!-- Tips -->
+        <div class="glass-card habit-card full-width">
+          <h2 class="section-title">💡 Digital Wellness Tips</h2>
+          <div class="tips-grid" id="tipsGrid"></div>
+        </div>
+
+      </div>
+    </section>
+    <!-- ═════════════════════════ TIME LIMITS ═════════════════════════ -->
+    <section class="tab-section" id="section-limits" role="tabpanel" aria-labelledby="tab-limits">
+
+      <!-- Notification permission banner -->
+      <div class="notif-banner" id="notifBanner" style="display:none">
+        <span>🔔 Enable browser notifications to get alerts when a limit is hit</span>
+        <button class="btn-green btn-sm" onclick="requestNotifPermission()">Enable Notifications</button>
+      </div>
+
+      <!-- Set a new limit -->
+      <div class="glass-card limits-set-card">
+        <h2 class="card-title">⏰ Set App Time Limit</h2>
+        <p class="card-subtitle">Add a daily limit for any app — get a notification when you hit it.</p>
+
+        <form class="limits-form" id="limitsForm" onsubmit="handleSetLimit(event)">
+          <div class="limits-form-row">
+            <div class="form-group">
+              <label class="form-label" for="limitApp">App / Website</label>
+              <input class="form-input" type="text" id="limitApp" placeholder="e.g. YouTube, Instagram…" list="appSuggestions" required />
+              <datalist id="appSuggestions">
+                <option value="YouTube"></option>
+                <option value="Instagram"></option>
+                <option value="Netflix"></option>
+                <option value="Twitter"></option>
+                <option value="TikTok"></option>
+                <option value="Gaming"></option>
+                <option value="WhatsApp"></option>
+                <option value="Reddit"></option>
+              </datalist>
+            </div>
+            <div class="form-group limits-time-group">
+              <label class="form-label">Daily Limit</label>
+              <div class="limits-time-row">
+                <div class="limits-time-unit">
+                  <input class="form-input" type="number" id="limitHours" min="0" max="23" value="1" aria-label="Hours" title="Hours" />
+                  <span class="limits-time-label">hours</span>
+                </div>
+                <div class="limits-time-unit">
+                  <input class="form-input" type="number" id="limitMins" min="0" max="59" value="0" aria-label="Minutes" title="Minutes" />
+                  <span class="limits-time-label">min</span>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn-green limits-add-btn" id="setLimitBtn">Set Limit</button>
+          </div>
+          <p class="limits-form-error" id="limitsError"></p>
+        </form>
+      </div>
+
+      <!-- Live limits list -->
+      <div class="glass-card" style="margin-top:1.25rem">
+        <div class="limits-list-header">
+          <h3 class="card-title" style="margin:0">📋 Your Active Limits</h3>
+          <span class="limits-refresh-hint">Updates when you log a session</span>
+        </div>
+        <div id="limitsList" class="limits-list">
+          <div class="empty-state"><span>⏱️</span><p>No limits set yet. Add one above!</p></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ░░░ EYE CARE MODAL ░░░ -->
+  <div class="modal-overlay" id="eyeModal" role="dialog" aria-modal="true" aria-labelledby="eyeModalTitle">
+    <div class="modal glass-card">
+      <div class="modal-icon">👁️</div>
+      <h2 id="eyeModalTitle">Time for an Eye Break!</h2>
+      <p>Look at something <strong>20 feet away</strong> for <strong>20 seconds</strong>.<br/>Let your eyes relax and breathe.</p>
+      <button class="btn-green btn-lg" onclick="closeEyeModal()" aria-label="Acknowledge eye break">✔ Done – Feeling Better!</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}?v=1.1"></script>
+</body>
+</html>
