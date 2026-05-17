@@ -1190,6 +1190,7 @@ select.date-input option, .date-input option {
     display: flex;
     gap: 0.25rem;
     padding-bottom: 0.25rem;
+    -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .nav-tabs::-webkit-scrollbar {
@@ -1233,6 +1234,7 @@ select.date-input option, .date-input option {
     overflow-x: auto;
     gap: 0.6rem;
     padding-bottom: 0.5rem;
+    -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .weekly-scores::-webkit-scrollbar {
