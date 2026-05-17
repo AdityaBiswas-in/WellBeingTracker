@@ -1117,9 +1117,15 @@ function renderWeeklyScores(data) {
     const scoreText = hasData ? d.balance_score : '–';
     const color = hasData ? scoreColor(d.balance_score) : 'var(--text-muted)';
     const cardOpacity = hasData ? '1' : '0.5';
+    
+    // Parse the numerical date day number (e.g. 17 from 2026-05-17)
+    const dateParts = d.date ? d.date.split('-') : [];
+    const dayNum = dateParts.length === 3 ? parseInt(dateParts[2]) : '';
+
     return `
       <div class="day-score-card" data-index="${d.origIndex}" style="opacity: ${cardOpacity};">
         <div class="day-label">${d.label}</div>
+        <div class="day-date">${dayNum}</div>
         <div class="day-score" style="color: ${color}; font-weight: ${hasData ? '700' : '400'};">${scoreText}</div>
         <div class="day-total">${hasData ? fmtMin(d.total) : '–'}</div>
       </div>`;

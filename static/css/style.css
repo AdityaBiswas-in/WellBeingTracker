@@ -510,8 +510,9 @@ select.date-input option, .date-input option {
   text-align: center; transition: all var(--transition);
 }
 .day-score-card:hover { border-color: var(--border-hover); background: var(--green-glow-sm); }
-.day-label  { font-size: .78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
-.day-score  { font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; font-weight: 700; margin: .2rem 0; }
+.day-label  { font-size: .78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; }
+.day-date   { font-size: .88rem; color: var(--text-primary); font-weight: 600; font-family: 'Space Grotesk', sans-serif; margin-bottom: .2rem; }
+.day-score  { font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; font-weight: 700; margin: .1rem 0 .2rem; }
 .day-total  { font-size: .75rem; color: var(--text-muted); }
 
 .score-legend { margin-top: 1.25rem; }
@@ -1064,8 +1065,9 @@ select.date-input option, .date-input option {
   border-color: var(--green-vivid); 
   box-shadow: 0 8px 24px var(--green-glow-sm); 
 }
-.day-label { font-size: .78rem; color: var(--text-muted); margin-bottom: .4rem; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
-.day-score { font-size: 1.4rem; font-weight: 700; margin-bottom: .3rem; font-family: 'Space Grotesk', sans-serif; }
+.day-label { font-size: .78rem; color: var(--text-muted); margin-bottom: .2rem; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.day-date  { font-size: .88rem; color: var(--text-primary); font-weight: 600; font-family: 'Space Grotesk', sans-serif; margin-bottom: .2rem; }
+.day-score { font-size: 1.4rem; font-weight: 700; margin-bottom: .2rem; font-family: 'Space Grotesk', sans-serif; }
 .day-total { font-size: .75rem; color: var(--text-secondary); font-weight: 600; }
 
 /* ── Custom File Upload Preview ─────────────────────────────── */
