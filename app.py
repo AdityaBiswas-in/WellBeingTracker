@@ -143,6 +143,12 @@ def init_db():
         except sqlite3.OperationalError:
             pass   # column already exists — nothing to do
 
+    # ── Safe migration: add is_auto to sessions table ────────────────────────
+    try:
+        c.execute('ALTER TABLE sessions ADD COLUMN is_auto INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -157,27 +163,49 @@ def get_db():
 def compute_balance_score(study_min, entertainment_min, social_min, work_min, other_min, total_min):
     """
     Digital Balance Score (0–100):
-      - Ideal daily screen time: ≤ 360 min (6 h)
-      - Ideal study ratio: 40–60%
+    Dynamically responds to screen time increments:
+      - Promotes productive study/work time.
+      - Penalizes excessive social/entertainment time.
+      - Rewards a balanced distribution of activities.
+      - Smoothly scales down as total screen time increases.
     """
     if total_min == 0:
         return 0
 
-    ideal_max  = 360
-    time_score = max(0, 40 - max(0, total_min - ideal_max) / ideal_max * 40)
+    # 1. Base Score starts at 70 (neutral starting point for active days)
+    # 2. Time Penalty: Smoothly reduces score as total screen time grows.
+    #    - Under 2 hours (120 mins): No penalty.
+    #    - From 2 hours to 6 hours (360 mins): Gradual deduction (up to 15 points).
+    #    - Above 6 hours: Steeper deduction.
+    if total_min <= 120:
+        time_penalty = 0
+    elif total_min <= 360:
+        time_penalty = (total_min - 120) / 240 * 15
+    else:
+        time_penalty = 15 + (total_min - 360) / 360 * 35
+    
+    # 3. Productivity Bonus:
+    #    - Each minute of 'study' adds +0.25 points.
+    #    - Each minute of 'work' adds +0.15 points.
+    #    - Capped at +30 points total.
+    prod_bonus = min(30, (study_min * 0.25) + (work_min * 0.15))
 
-    study_ratio  = study_min / total_min
-    study_score  = (30 if 0.4 <= study_ratio <= 0.6
-                    else (study_ratio / 0.4 * 30 if study_ratio < 0.4
-                          else max(0, 30 - (study_ratio - 0.6) / 0.4 * 15)))
+    # 4. Leisure & Social Penalty:
+    #    - Each minute of 'social' deducts -0.20 points.
+    #    - Each minute of 'entertainment' deducts -0.12 points.
+    #    - Capped at -35 points total.
+    leisure_penalty = min(35, (social_min * 0.20) + (entertainment_min * 0.12))
 
-    ent_ratio  = entertainment_min / total_min
-    ent_score  = max(0, 20 - max(0, ent_ratio - 0.3) / 0.7 * 20)
+    # 5. Diversity Bonus:
+    #    - Having multiple active categories encourages balanced lifestyle.
+    active_cats = sum(1 for m in [study_min, entertainment_min, social_min, work_min, other_min] if m > 0.5)
+    diversity_bonus = min(10, active_cats * 2.5)
 
-    active_cats    = sum(1 for m in [study_min, entertainment_min, social_min, work_min, other_min] if m > 0)
-    diversity_score = min(10, active_cats * 2)
-
-    return round(min(100, time_score + study_score + ent_score + diversity_score))
+    # Calculate final score
+    score = 70 - time_penalty + prod_bonus - leisure_penalty + diversity_bonus
+    
+    # Ensure score stays within [0, 100] range
+    return int(round(max(0, min(100, score))))
 
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
 @app.route('/signup', methods=['GET', 'POST'])
@@ -288,6 +316,18 @@ def index():
         conn.close()
         current_user.switch_token = token
 
+    # Write to local config for tracker.py
+    config_path = os.path.join(os.path.dirname(__file__), '.tracker_config.json')
+    try:
+        with open(config_path, 'w') as f:
+            json.dump({
+                'server_url': 'http://127.0.0.1:5000',
+                'switch_token': token,
+                'username': current_user.username
+            }, f)
+    except Exception as e:
+        print("Error writing tracker config:", e)
+
     return render_template('index.html', 
                            username=current_user.username,
                            email=current_user.email,
@@ -319,6 +359,18 @@ def switch_account():
         
     user = User(user_row['id'], user_row['username'], user_row['email'])
     login_user(user, remember=True)
+    
+    # Write config after successful switch
+    config_path = os.path.join(os.path.dirname(__file__), '.tracker_config.json')
+    try:
+        with open(config_path, 'w') as f:
+            json.dump({
+                'server_url': 'http://127.0.0.1:5000',
+                'switch_token': switch_token,
+                'username': user_row['username']
+            }, f)
+    except Exception as e:
+        print("Error writing tracker config:", e)
     
     return jsonify({'success': True})
 
@@ -444,6 +496,150 @@ def delete_session(session_id):
     conn.commit()
     conn.close()
     return jsonify({'success': True})
+
+
+# ══════════════════════════════════════════════════════════════
+# BACKGROUND AUTO-TRACKER INTEGRATION
+# ══════════════════════════════════════════════════════════════
+active_trackers = {}
+
+def get_app_category(app_name):
+    app_lower = app_name.lower()
+    if any(x in app_lower for x in ['vs code', 'visual studio', 'python', 'github', 'sublime', 'pycharm', 'intellij', 'terminal', 'cmd', 'powershell', 'stud', 'learn', 'course', 'coding', 'antigravity']):
+        return 'study'
+    elif any(x in app_lower for x in ['youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming']):
+        return 'entertainment'
+    elif any(x in app_lower for x in ['chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger']):
+        return 'social'
+    elif any(x in app_lower for x in ['zoom', 'slack', 'teams', 'excel', 'word', 'outlook', 'powerpoint', 'meet', 'skype', 'trello', 'notion']):
+        return 'work'
+    return 'other'
+
+
+@app.route('/api/tracker/ping', methods=['POST'])
+def tracker_ping():
+    data = request.get_json() or {}
+    app_name = data.get('app_name', '').strip()
+    window_title = data.get('window_title', '').strip()
+    token = data.get('switch_token', '').strip()
+    
+    if not app_name or not token:
+        return jsonify({'error': 'Missing fields'}), 400
+        
+    conn = get_db()
+    user_row = conn.execute('SELECT id FROM users WHERE switch_token=?', (token,)).fetchone()
+    conn.close()
+    
+    if not user_row:
+        return jsonify({'error': 'Invalid token'}), 401
+        
+    user_id = user_row['id']
+    category = get_app_category(app_name)
+    now = datetime.now()
+    
+    state = active_trackers.get(user_id)
+    
+    if state and state['app_name'] == app_name:
+        elapsed_sec = (now - state['last_ping']).total_seconds()
+        if elapsed_sec > 15:
+            elapsed_sec = 3.0  # Safe fallback if tracking was paused/slept
+            
+        elapsed_min = elapsed_sec / 60.0
+        today = date.today().isoformat()
+        
+        conn = get_db()
+        existing = conn.execute(
+            'SELECT id, minutes FROM sessions WHERE user_id=? AND date=? AND app_name=? AND category=? AND is_auto=1',
+            (user_id, today, app_name, category)
+        ).fetchone()
+        
+        if existing:
+            new_minutes = existing['minutes'] + elapsed_min
+            conn.execute(
+                'UPDATE sessions SET minutes=? WHERE id=?',
+                (new_minutes, existing['id'])
+            )
+        else:
+            conn.execute(
+                'INSERT INTO sessions (user_id, date, category, app_name, minutes, is_auto) VALUES (?,?,?,?,?,1)',
+                (user_id, today, category, app_name, elapsed_min)
+            )
+        conn.commit()
+        conn.close()
+        
+        state['last_ping'] = now
+        state['session_duration'] += elapsed_sec
+    else:
+        active_trackers[user_id] = {
+            'app_name': app_name,
+            'window_title': window_title,
+            'category': category,
+            'start_time': now,
+            'last_ping': now,
+            'session_duration': 0.0
+        }
+        
+    return jsonify({'success': True})
+
+
+@app.route('/api/tracker/status', methods=['GET'])
+@login_required
+def tracker_status():
+    user_id = current_user.id
+    state = active_trackers.get(user_id)
+    now = datetime.now()
+    
+    tracker_running = False
+    current_app = ""
+    current_category = ""
+    current_title = ""
+    session_duration = 0
+    
+    if state:
+        time_diff = (now - state['last_ping']).total_seconds()
+        if time_diff <= 12:  # allow slight latency
+            tracker_running = True
+            current_app = state['app_name']
+            current_category = state['category']
+            current_title = state['window_title']
+            session_duration = int(state['session_duration'])
+            
+    today = date.today().isoformat()
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT app_name, category, SUM(minutes) as total_min FROM sessions '
+        'WHERE user_id=? AND date=? AND is_auto=1 '
+        'GROUP BY app_name, category '
+        'ORDER BY total_min DESC',
+        (user_id, today)
+    ).fetchall()
+    
+    total_row = conn.execute(
+        'SELECT SUM(minutes) as grand_total FROM sessions WHERE user_id=? AND date=?',
+        (user_id, today)
+    ).fetchone()
+    conn.close()
+    
+    grand_total = total_row['grand_total'] if total_row and total_row['grand_total'] else 0
+    
+    auto_detected = []
+    for r in rows:
+        pct = (r['total_min'] / grand_total * 100) if grand_total > 0 else 0
+        auto_detected.append({
+            'app_name': r['app_name'],
+            'category': r['category'],
+            'minutes': r['total_min'],
+            'percentage': round(pct, 1)
+        })
+        
+    return jsonify({
+        'tracker_running': tracker_running,
+        'current_app': current_app,
+        'current_category': current_category,
+        'current_title': current_title,
+        'session_duration': session_duration,
+        'auto_detected_apps': auto_detected
+    })
 
 
 @app.route('/api/report', methods=['GET'])

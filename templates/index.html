@@ -32,9 +32,7 @@
       <button class="nav-tab active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="section-dashboard" onclick="switchTab('dashboard')">
         <span class="tab-icon">📊</span> Dashboard
       </button>
-      <button class="nav-tab" id="tab-log" role="tab" aria-selected="false" aria-controls="section-log" onclick="switchTab('log')">
-        <span class="tab-icon">➕</span> Log Time
-      </button>
+
       <button class="nav-tab" id="tab-weekly" role="tab" aria-selected="false" aria-controls="section-weekly" onclick="switchTab('weekly')">
         <span class="tab-icon">📅</span> Weekly
       </button>
@@ -98,6 +96,25 @@
   <!-- ░░░ MAIN ░░░ -->
   <main class="main-container" role="main">
 
+    <!-- ░░░ LIVE TRACKER STATUS BAR ░░░ -->
+    <div id="liveTrackerBanner" class="live-tracker-banner glass-card" style="display: none;">
+      <div class="tracker-left">
+        <span class="pulse-dot"></span>
+        <span class="tracker-status-text">Auto-Tracking Active</span>
+      </div>
+      <div class="tracker-center" id="trackerCurrentApp">
+        <div class="tracker-app-pill">
+          <span class="tracker-app-favicon" id="trackerAppFavicon">💻</span>
+          <span class="tracker-app-name" id="trackerAppName">VS Code</span>
+          <span class="tracker-cat-badge" id="trackerAppCat">Study</span>
+        </div>
+      </div>
+      <div class="tracker-right">
+        <span class="tracker-timer-label">Current Session</span>
+        <span class="tracker-timer-val" id="trackerSessionTimer">0h 00m 00s</span>
+      </div>
+    </div>
+
     <!-- ═══════════════════════════ DASHBOARD ═══════════════════════════ -->
     <section class="tab-section active" id="section-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
 
@@ -152,6 +169,8 @@
           </div>
         </div>
       </div>
+
+
 
       <!-- Chart + Sessions Row -->
       <div class="charts-row">
@@ -215,81 +234,25 @@
         </div>
       </div>
 
-      <!-- Today's Sessions -->
-      <div class="sessions-section glass-card">
-        <div class="sessions-header">
-          <h2 class="card-title">Today's Sessions</h2>
-          <input type="date" id="dashDate" class="date-input" aria-label="Select date" onchange="loadDashboard(this.value)" />
+      <!-- ░░░ AUTO-DETECTED TODAY CARD ░░░ -->
+      <div class="glass-card auto-detected-card" style="margin-top: 1.5rem; padding: 1.75rem;">
+        <div class="auto-detected-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <span style="color: var(--green-vivid);">🤖</span> Auto-Detected Apps
+          </h2>
+          <span class="auto-detected-badge" style="font-size: 0.75rem; color: var(--text-secondary); background: var(--green-glow-sm); border: 1px solid var(--border-glass); padding: 0.25rem 0.6rem; border-radius: 50px; font-weight: 600;">Live Feed</span>
         </div>
-        <div class="sessions-list" id="sessionsList">
-          <div class="empty-state">
-            <span>🌱</span>
-            <p>No sessions logged yet. Start tracking!</p>
+        
+        <div class="auto-detected-list" id="autoDetectedList">
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.88rem; padding: 1.5rem 1rem;">
+            <span>🤖</span>
+            <p style="margin-top: 0.5rem;">No auto-detected applications tracked today. Run <code style="font-family: monospace; color: var(--green-vivid);">tracker.py</code> in the background!</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══════════════════════════ LOG TIME ═══════════════════════════ -->
-    <section class="tab-section" id="section-log" role="tabpanel" aria-labelledby="tab-log">
-      <div class="log-hero glass-card">
-        <h2 class="section-title">Log Screen Time</h2>
-        <p class="section-desc">Record what you spent your time on. Honest tracking leads to better habits.</p>
 
-        <form id="logForm" class="log-form" onsubmit="submitSession(event)" novalidate>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="appName" class="form-label">App / Activity</label>
-              <input type="text" id="appName" name="appName" class="form-input" placeholder="e.g. YouTube, Reading, Coding…" required aria-required="true" autocomplete="off" />
-            </div>
-            <div class="form-group">
-              <label for="category" class="form-label">Category</label>
-              <select id="category" name="category" class="form-input" required aria-required="true">
-                <option value="" disabled selected>Select category…</option>
-                <option value="study">📚 Study</option>
-                <option value="entertainment">🎮 Entertainment</option>
-                <option value="social">💬 Social Media</option>
-                <option value="work">💼 Work</option>
-                <option value="other">🔲 Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="hours" class="form-label">Hours</label>
-              <input type="number" id="hours" name="hours" class="form-input" placeholder="0" min="0" max="24" value="0" aria-label="Hours spent" />
-            </div>
-            <div class="form-group">
-              <label for="minutes" class="form-label">Minutes</label>
-              <input type="number" id="minutes" name="minutes" class="form-input" placeholder="30" min="0" max="59" value="30" aria-label="Minutes spent" />
-            </div>
-          </div>
-
-          <div id="formError" class="form-error" role="alert" aria-live="polite"></div>
-
-          <button type="submit" class="btn-green btn-lg" id="submitBtn" aria-label="Log this session">
-            <span class="btn-icon">➕</span> Log Session
-          </button>
-        </form>
-
-        <!-- Quick Presets -->
-        <div class="presets">
-          <p class="presets-label">Quick Add:</p>
-          <div class="preset-chips">
-            <button class="chip" onclick="preset('YouTube', 'entertainment', 30)" aria-label="Add 30 minutes YouTube">▶ YouTube 30m</button>
-            <button class="chip" onclick="preset('Reading', 'study', 45)" aria-label="Add 45 minutes reading">📖 Reading 45m</button>
-            <button class="chip" onclick="preset('Instagram', 'social', 20)" aria-label="Add 20 minutes Instagram">📸 Instagram 20m</button>
-            <button class="chip" onclick="preset('Coding', 'study', 60)" aria-label="Add 60 minutes coding">💻 Coding 1h</button>
-            <button class="chip" onclick="preset('Gaming', 'entertainment', 60)" aria-label="Add 60 minutes gaming">🎮 Gaming 1h</button>
-            <button class="chip" onclick="preset('Zoom / Meet', 'work', 60)" aria-label="Add 60 minutes Zoom">📹 Zoom 1h</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Success Toast -->
-      <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    </section>
 
     <!-- ═══════════════════════════ WEEKLY ═══════════════════════════ -->
     <section class="tab-section" id="section-weekly" role="tabpanel" aria-labelledby="tab-weekly">
@@ -811,6 +774,7 @@
       }
     }
   </script>
+
   <script src="{{ url_for('static', filename='js/app.js') }}?v=1.1"></script>
 </body>
 </html>

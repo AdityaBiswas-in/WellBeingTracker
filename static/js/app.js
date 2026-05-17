@@ -124,7 +124,7 @@ let eyePaused     = false;
 
   function draw() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const rgb = isLight ? '0,162,255' : '0,230,118';
+    const rgb = isLight ? '0,122,255' : '0,230,118';
 
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => {
@@ -203,8 +203,8 @@ function fmtMin(minutes) {
 
 function scoreColor(score) {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  if (score >= 80) return isLight ? '#007acc' : '#00e676';
-  if (score >= 60) return isLight ? '#00a2ff' : '#69f0ae';
+  if (score >= 80) return isLight ? '#0066cc' : '#00e676';
+  if (score >= 60) return isLight ? '#0088ff' : '#69f0ae';
   if (score >= 40) return '#ffd740';
   return '#ff6e40';
 }
@@ -247,14 +247,17 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════════════
-async function loadDashboard(dateStr) {
+async function loadDashboard(dateStr, silent = false) {
   if (!dateStr) {
     const today = new Date();
     const offset = today.getTimezoneOffset() * 60000;
     const localDate = new Date(today.getTime() - offset);
     dateStr = localDate.toISOString().split('T')[0];
   }
-  document.getElementById('dashDate').value = dateStr;
+  const dashDateInput = document.getElementById('dashDate');
+  if (dashDateInput) {
+    dashDateInput.value = dateStr;
+  }
 
   const [reportRes, sessionsRes, eyeRes] = await Promise.all([
     fetch(`/api/report?date=${dateStr}`),
@@ -265,16 +268,16 @@ async function loadDashboard(dateStr) {
   const sessions = await sessionsRes.json();
   const eye      = await eyeRes.json();
 
-  updateScoreRing(report.balance_score);
+  updateScoreRing(report.balance_score, silent);
   updateStatCards(report, eye.count);
-  updateDoughnutChart(report);
+  updateDoughnutChart(report, silent);
   updateRatioBar(report);
   updateBalanceTip(report);
   renderSessions(sessions);
 }
 
 // ── Score Ring ───────────────────────────────────────────────
-function updateScoreRing(score) {
+function updateScoreRing(score, silent = false) {
   const scoreNumEl  = document.getElementById('scoreNum');
   const fillEl      = document.getElementById('scoreRingFill');
   const subtitleEl  = document.getElementById('scoreSubtitle');
@@ -288,9 +291,14 @@ function updateScoreRing(score) {
 
   fillEl.style.strokeDashoffset = offset;
   fillEl.style.stroke           = color;
-  fillEl.style.filter           = isLight ? `drop-shadow(0 2px 4px rgba(0, 122, 204, 0.3))` : `drop-shadow(0 0 8px ${color})`;
+  fillEl.style.filter           = isLight ? `drop-shadow(0 2px 4px rgba(0, 122, 255, 0.3))` : `drop-shadow(0 0 8px ${color})`;
 
-  animateValue(scoreNumEl, parseInt(scoreNumEl.textContent) || 0, score);
+  if (silent) {
+    scoreNumEl.textContent = score;
+  } else {
+    animateValue(scoreNumEl, parseInt(scoreNumEl.textContent) || 0, score);
+  }
+  
   subtitleEl.textContent = scoreSubtitleText(score);
   badgeEl.textContent    = scoreBadgeText(score);
   badgeEl.style.color    = color;
@@ -307,16 +315,35 @@ function updateStatCards(report, eyeCount) {
 }
 
 // ── Doughnut Chart ───────────────────────────────────────────
-function updateDoughnutChart(report) {
+function updateDoughnutChart(report, silent = false) {
   const data = [report.study, report.entertainment, report.social, report.work, report.other];
   const labels = ['Study', 'Entertainment', 'Social', 'Work', 'Other'];
   const colors = Object.values(CAT_COLORS);
 
   const ctx = document.getElementById('doughnutChart').getContext('2d');
+  const total = report.total;
+
+  // In-place update if chart already exists to prevent visual jumping
+  if (doughnutChart && total > 0 && doughnutChart.data.datasets.length > 0 && doughnutChart.data.labels[0] !== 'No data yet') {
+    doughnutChart.data.datasets[0].data = data;
+    if (silent) {
+      doughnutChart.update('none'); // Update without animation
+    } else {
+      doughnutChart.update();
+    }
+    
+    // Custom legend
+    const legend = document.getElementById('doughnutLegend');
+    legend.innerHTML = labels.map((l, i) => data[i] > 0 ? `
+      <div class="legend-chip">
+        <span class="legend-dot" style="background:${colors[i]}"></span>
+        <span>${l}: ${fmtMin(data[i])}</span>
+      </div>` : '').join('');
+    return;
+  }
 
   if (doughnutChart) { doughnutChart.destroy(); }
 
-  const total = report.total;
   if (total === 0) {
     // Empty state placeholder
     doughnutChart = new Chart(ctx, {
@@ -353,7 +380,7 @@ function updateDoughnutChart(report) {
           },
         },
       },
-      animation: { duration: 900, easing: 'easeOutQuart' },
+      animation: { duration: silent ? 0 : 900, easing: 'easeOutQuart' },
     },
   });
 
@@ -416,18 +443,46 @@ function updateBalanceTip(report) {
 // ── Sessions List ────────────────────────────────────────────
 function renderSessions(sessions) {
   const list = document.getElementById('sessionsList');
+  if (!list) return;
   if (sessions.length === 0) {
     list.innerHTML = `<div class="empty-state"><span>🌱</span><p>No sessions logged yet. Start tracking!</p></div>`;
     return;
   }
-  list.innerHTML = sessions.map(s => `
-    <div class="session-item" id="sess-${s.id}">
-      <span class="session-cat-dot" style="background:${CAT_COLORS[s.category] || '#888'}"></span>
-      <span class="session-app">${escHtml(s.app_name)}</span>
-      <span class="session-cat">${s.category}</span>
-      <span class="session-time">${fmtMin(s.minutes)}</span>
-      <button class="session-del" onclick="deleteSession(${s.id})" aria-label="Delete ${escHtml(s.app_name)} session" title="Delete">✕</button>
-    </div>`).join('');
+
+  // Diffing comparison to prevent flickering
+  const currentSessionIds = Array.from(list.querySelectorAll('.session-item')).map(el => el.id);
+  const incomingSessionIds = sessions.map(s => `sess-${s.id}`);
+
+  const setsEqual = currentSessionIds.length === incomingSessionIds.length && 
+                    currentSessionIds.every((val, index) => val === incomingSessionIds[index]);
+
+  if (!setsEqual) {
+    // Rebuild DOM if sessions are added, removed, or switched
+    list.innerHTML = sessions.map(s => `
+      <div class="session-item" id="sess-${s.id}" data-minutes="${s.minutes}">
+        <span class="session-cat-dot" style="background:${CAT_COLORS[s.category] || '#888'}"></span>
+        <span class="session-app">
+          ${escHtml(s.app_name)}
+          ${s.is_auto ? '<span class="auto-badge" style="font-size: 0.68rem; color: var(--green-vivid); background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.2); padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🤖 Auto</span>' : ''}
+        </span>
+        <span class="session-cat">${s.category}</span>
+        <span class="session-time">${fmtMin(s.minutes)}</span>
+        <button class="session-del" onclick="deleteSession(${s.id})" aria-label="Delete ${escHtml(s.app_name)} session" title="Delete">✕</button>
+      </div>`).join('');
+  } else {
+    // Smoothly update minutes of existing rows inline without flashing
+    sessions.forEach(s => {
+      const row = document.getElementById(`sess-${s.id}`);
+      if (row) {
+        const oldMins = parseFloat(row.getAttribute('data-minutes')) || 0;
+        if (Math.abs(oldMins - s.minutes) > 0.01) {
+          row.setAttribute('data-minutes', s.minutes);
+          const timeEl = row.querySelector('.session-time');
+          if (timeEl) timeEl.textContent = fmtMin(s.minutes);
+        }
+      }
+    });
+  }
 }
 
 function escHtml(str) {
@@ -897,7 +952,7 @@ function renderWeeklyChart(data) {
   if (weeklyChart) weeklyChart.destroy();
 
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  const gridColor = isLight ? 'rgba(0,162,255,.08)' : 'rgba(0,230,118,.06)';
+  const gridColor = isLight ? 'rgba(0,122,255,.08)' : 'rgba(0,230,118,.06)';
   const tickColor = isLight ? '#57799c' : '#4a7c59';
   const legendColor = isLight ? '#2b445e' : '#a5d6a7';
   
@@ -986,7 +1041,7 @@ function renderWeeklyChart(data) {
   } else if (weeklyChartStyle === 'trend') {
     chartType = 'bar'; // Root type is bar, line layers can override
     
-    const scoreColorHex = isLight ? '#0070f3' : '#00e676';
+    const scoreColorHex = isLight ? '#0066cc' : '#00e676';
 
     datasets = [
       {
@@ -1927,4 +1982,255 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+  // Initialize background auto-tracker polling
+  initTracker();
 });
+
+
+// ══════════════════════════════════════════════════════════════
+// BACKGROUND AUTO-TRACKER FRONTEND LOGIC
+// ══════════════════════════════════════════════════════════════
+let trackerSessionSeconds = 0;
+let trackerTimerInterval = null;
+
+function initTracker() {
+  const widget = document.getElementById('trackerStatusWidget');
+  if (widget) {
+    const isMinimized = localStorage.getItem('trackerWidgetMinimized') !== 'false';
+    if (isMinimized) {
+      widget.classList.add('minimized');
+      const arrow = document.getElementById('widgetArrow');
+      if (arrow) arrow.textContent = '▲';
+    } else {
+      widget.classList.remove('minimized');
+      const arrow = document.getElementById('widgetArrow');
+      if (arrow) arrow.textContent = '▼';
+    }
+  }
+
+  // Initial poll and start 3s interval
+  pollTrackerStatus();
+  setInterval(pollTrackerStatus, 3000);
+
+  // Smooth real-time timer count up in browser (1s tick)
+  if (trackerTimerInterval) clearInterval(trackerTimerInterval);
+  trackerTimerInterval = setInterval(() => {
+    const banner = document.getElementById('liveTrackerBanner');
+    if (banner && banner.style.display !== 'none') {
+      trackerSessionSeconds++;
+      updateTimerDisplay(trackerSessionSeconds);
+    }
+  }, 1000);
+}
+
+window.toggleWidget = function() {
+  const widget = document.getElementById('trackerStatusWidget');
+  if (!widget) return;
+  const wasMinimized = widget.classList.contains('minimized');
+  widget.classList.toggle('minimized');
+  localStorage.setItem('trackerWidgetMinimized', !wasMinimized);
+  const arrow = document.getElementById('widgetArrow');
+  if (arrow) {
+    arrow.textContent = wasMinimized ? '▼' : '▲';
+  }
+};
+
+function updateTimerDisplay(totalSecs) {
+  const timerVal = document.getElementById('trackerSessionTimer');
+  if (!timerVal) return;
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  
+  const hStr = hours > 0 ? `${hours}h ` : '';
+  const mStr = mins < 10 ? `0${mins}m` : `${mins}m`;
+  const sStr = secs < 10 ? `0${secs}s` : `${secs}s`;
+  timerVal.textContent = `${hStr}${mStr} ${sStr}`;
+}
+
+const CAT_ICONS = {
+  study: '📚',
+  entertainment: '🎮',
+  social: '💬',
+  work: '💼',
+  other: '🔲'
+};
+
+const CAT_LABELS = {
+  study: 'Study',
+  entertainment: 'Entertainment',
+  social: 'Social',
+  work: 'Work',
+  other: 'Other'
+};
+
+async function pollTrackerStatus() {
+  const dotTracker = document.getElementById('widgetDotTracker');
+  const textTracker = document.getElementById('widgetTextTracker');
+  const dotApi = document.getElementById('widgetDotApi');
+  const textApi = document.getElementById('widgetTextApi');
+  const liveBanner = document.getElementById('liveTrackerBanner');
+  const infoCard = document.getElementById('trackerInfoCard');
+  
+  try {
+    const res = await fetch('/api/tracker/status');
+    if (!res.ok) throw new Error('API Offline');
+    
+    const data = await res.json();
+    
+    // API is Online
+    if (dotApi) {
+      dotApi.classList.add('active');
+      textApi.textContent = 'Connected';
+      textApi.classList.add('active');
+    }
+    
+    if (data.tracker_running) {
+      if (dotTracker) {
+        dotTracker.classList.add('active');
+        textTracker.textContent = 'Active';
+        textTracker.classList.add('active');
+      }
+      
+      // Update Live Banner
+      if (liveBanner) {
+        liveBanner.style.display = 'flex';
+      }
+      if (infoCard) {
+        infoCard.style.display = 'flex';
+      }
+      
+      // Update Banner contents
+      const faviconEl = document.getElementById('trackerAppFavicon');
+      const nameEl = document.getElementById('trackerAppName');
+      const catEl = document.getElementById('trackerAppCat');
+      
+      if (nameEl) nameEl.textContent = data.current_app;
+      if (catEl) {
+        catEl.textContent = CAT_LABELS[data.current_category] || data.current_category;
+        catEl.className = `tracker-cat-badge auto-cat-${data.current_category}`;
+      }
+      if (faviconEl) {
+        faviconEl.textContent = CAT_ICONS[data.current_category] || '💻';
+      }
+      
+      // Sync running timer (only if out of sync by > 5 seconds)
+      if (Math.abs(trackerSessionSeconds - data.session_duration) > 5) {
+        trackerSessionSeconds = data.session_duration;
+        updateTimerDisplay(trackerSessionSeconds);
+      }
+    } else {
+      if (dotTracker) {
+        dotTracker.classList.remove('active');
+        textTracker.textContent = 'Offline';
+        textTracker.classList.remove('active');
+      }
+      if (liveBanner) {
+        liveBanner.style.display = 'none';
+      }
+      if (infoCard) {
+        infoCard.style.display = 'none';
+      }
+    }
+    
+    // Update Auto-Detected List inside Dashboard card
+    const listEl = document.getElementById('autoDetectedList');
+    if (listEl) {
+      if (data.auto_detected_apps && data.auto_detected_apps.length > 0) {
+        // Check if we need a full rebuild (different set/order of apps)
+        const currentAppNames = Array.from(listEl.querySelectorAll('.auto-detected-row')).map(el => el.getAttribute('data-app'));
+        const incomingAppNames = data.auto_detected_apps.map(app => app.app_name);
+        
+        const setsEqual = currentAppNames.length === incomingAppNames.length && 
+                          currentAppNames.every((val, index) => val === incomingAppNames[index]);
+                          
+        if (!setsEqual) {
+          // Rebuild HTML from scratch
+          let html = '';
+          data.auto_detected_apps.forEach(app => {
+            const categoryIcon = CAT_ICONS[app.category] || '💻';
+            const categoryLabel = CAT_LABELS[app.category] || app.category;
+            const totalMin = app.minutes;
+            
+            let durationStr = totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m` : `${Math.round(totalMin)}m`;
+            let barColor = 'var(--green-vivid)';
+            if (app.category === 'entertainment') barColor = 'var(--cat-ent)';
+            else if (app.category === 'social') barColor = 'var(--cat-social)';
+            else if (app.category === 'work') barColor = 'var(--cat-work)';
+            else if (app.category === 'other') barColor = 'var(--cat-other)';
+            
+            const safeAppNameAttr = app.app_name.replace(/"/g, '&quot;');
+            
+            html += `
+              <div class="auto-detected-row" data-app="${safeAppNameAttr}">
+                <div class="auto-app-icon">${categoryIcon}</div>
+                <div class="auto-app-name" title="${app.app_name}">${app.app_name}</div>
+                <div>
+                  <span class="auto-cat-pill auto-cat-${app.category}">${categoryLabel}</span>
+                </div>
+                <div class="auto-bar-track">
+                  <div class="auto-bar-fill" style="width: ${app.percentage}%; background-color: ${barColor}; box-shadow: 0 0 8px ${barColor}; transition: width 0.8s ease-in-out;"></div>
+                </div>
+                <div class="auto-duration">${durationStr} (${app.percentage}%)</div>
+              </div>
+            `;
+          });
+          listEl.innerHTML = html;
+        } else {
+          // Smoothly update existing rows inline to prevent flickering and keep transitions active
+          data.auto_detected_apps.forEach(app => {
+            const safeAppNameAttr = app.app_name.replace(/"/g, '&quot;');
+            const row = listEl.querySelector(`.auto-detected-row[data-app="${safeAppNameAttr}"]`);
+            if (row) {
+              const totalMin = app.minutes;
+              let durationStr = totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m` : `${Math.round(totalMin)}m`;
+              
+              // Update progress bar width smoothly
+              const fill = row.querySelector('.auto-bar-fill');
+              if (fill) fill.style.width = `${app.percentage}%`;
+              
+              // Update duration text
+              const dur = row.querySelector('.auto-duration');
+              if (dur) dur.textContent = `${durationStr} (${app.percentage}%)`;
+            }
+          });
+        }
+      } else {
+        listEl.innerHTML = `
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.88rem; padding: 1.5rem 1rem;">
+            <span>🤖</span>
+            <p style="margin-top: 0.5rem;">No auto-detected applications tracked today. Run <code style="font-family: monospace; color: var(--green-vivid);">tracker.py</code> in the background!</p>
+          </div>
+        `;
+      }
+    }
+
+    // Auto-refresh Dashboard components if on the Dashboard tab and auto-tracking is active
+    const dashboardSection = document.getElementById('section-dashboard');
+    if (dashboardSection && dashboardSection.classList.contains('active') && data.tracker_running) {
+      const dashDateInput = document.getElementById('dashDate');
+      const dateStr = dashDateInput ? dashDateInput.value : null;
+      loadDashboard(dateStr, true);
+    }
+    
+  } catch (err) {
+    // API is Offline
+    if (dotApi) {
+      dotApi.classList.remove('active');
+      textApi.textContent = 'Offline';
+      textApi.classList.remove('active');
+    }
+    if (dotTracker) {
+      dotTracker.classList.remove('active');
+      textTracker.textContent = 'Offline';
+      textTracker.classList.remove('active');
+    }
+    if (liveBanner) {
+      liveBanner.style.display = 'none';
+    }
+    if (infoCard) {
+      infoCard.style.display = 'none';
+    }
+  }
+}
