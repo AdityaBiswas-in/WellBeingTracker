@@ -1,8 +1,8 @@
 # ⚡ Digital Well-Being Tracker
 
-<p align="center">
+<!-- <p align="center">
   <img src="static/icon.png" width="150" alt="Digital Well-Being Tracker Logo" />
-</p>
+</p> -->
 
 > A sleek, black-and-green wellness app to monitor your daily screen time, study vs entertainment balance, eye-care habits, and overall **Digital Balance Score**.
 
