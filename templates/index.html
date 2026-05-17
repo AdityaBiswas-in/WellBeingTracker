@@ -47,6 +47,11 @@
     </div>
     <div class="nav-date" id="currentDateTime" aria-label="Current date and time"></div>
     <div class="nav-user">
+      <button id="instructorToggleBtn" class="instructor-toggle" onclick="toggleInstructorMobile()" title="Toggle Instructor" aria-label="Toggle Instructor">
+        <div class="instructor-btn-avatar">
+          <img src="{{ url_for('static', filename='instructor.png') }}" alt="Assistant">
+        </div>
+      </button>
       <button id="themeToggleBtn" aria-label="Toggle Light/Dark Mode" onclick="toggleTheme()" class="theme-toggle" title="Toggle Theme">☀️</button>
       
       <div class="user-dropdown-wrap">
@@ -643,6 +648,26 @@
 
   <script>
     window.CURRENT_USERNAME = "{{ username }}";
+
+    function toggleInstructorMobile() {
+      const container = document.getElementById('instructor-container');
+      const btn = document.getElementById('instructorToggleBtn');
+      if (!container) return;
+      
+      const isMobileShown = container.classList.contains('mobile-show');
+      if (isMobileShown) {
+        container.classList.remove('mobile-show');
+        if (btn) btn.classList.remove('active');
+        const bubble = document.getElementById('instructor-bubble');
+        if (bubble) bubble.classList.remove('bubble-visible');
+      } else {
+        container.classList.add('mobile-show');
+        if (btn) btn.classList.add('active');
+        if (typeof showInstructor === 'function') {
+          showInstructor("Hello! I'm here in mobile view to guide your digital wellbeing. 👩‍🏫");
+        }
+      }
+    }
 
     // Auto-save this session in the list of saved accounts
     (function saveCurrentAccount() {
