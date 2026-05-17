@@ -2,13 +2,55 @@
    Digital Well-Being Tracker  ·  app.js
    ═══════════════════════════════════════════════════════════════ */
 
+// ── Namespaced localStorage for Multi-Account support ─────────
+const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks'];
+
+function getNamespacedKey(key) {
+  if (userSpecificKeys.includes(key)) {
+    const user = window.CURRENT_USERNAME || 'default';
+    return `${key}_${user}`;
+  }
+  return key;
+}
+
+const originalGetItem = localStorage.getItem;
+const originalSetItem = localStorage.setItem;
+const originalRemoveItem = localStorage.removeItem;
+
+localStorage.getItem = function(key) {
+  return originalGetItem.call(localStorage, getNamespacedKey(key));
+};
+
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(localStorage, getNamespacedKey(key), value);
+};
+
+localStorage.removeItem = function(key) {
+  originalRemoveItem.call(localStorage, getNamespacedKey(key));
+};
+
 // ── Category colours (must match CSS tokens) ─────────────────
 const CAT_COLORS = {
-  study:         '#00e676',
-  entertainment: '#ff6e40',
-  social:        '#40c4ff',
-  work:          '#ffd740',
-  other:         '#b39ddb',
+  get study() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#2e7d32' : '#00e676';
+  },
+  get entertainment() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#d84315' : '#ff6e40';
+  },
+  get social() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#0277bd' : '#40c4ff';
+  },
+  get work() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#f57f17' : '#ffd740';
+  },
+  get other() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#651fff' : '#b39ddb';
+  }
 };
 
 // ── Theme Toggle ───────────────────────────────────────────────
@@ -50,6 +92,7 @@ let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // '
 let eyeInterval   = null;
 let eyeSeconds    = 20 * 60;   // 20 minutes
 let eyeActive     = false;
+let eyePaused     = false;
 
 // ══════════════════════════════════════════════════════════════
 // PARTICLE BACKGROUND
@@ -463,33 +506,279 @@ function preset(appName, category, minutes) {
 // ══════════════════════════════════════════════════════════════
 function startEyeTimer() {
   if (eyeActive) return;
+  
+  const btnStart = document.getElementById('btnEyeStart');
+  if (!btnStart) return;
+
   eyeActive  = true;
-  eyeSeconds = 20 * 60;
-  document.getElementById('btnEyeStart').textContent = '⏳ Running…';
-  document.getElementById('btnEyeStart').disabled    = true;
+  eyePaused  = false;
+  
+  const endTime = Date.now() + 20 * 60 * 1000;
+  localStorage.setItem('eyeTimerActive', 'true');
+  localStorage.setItem('eyeTimerEndTime', endTime.toString());
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  // Update UI button states
+  btnStart.textContent = '⏳ Running…';
+  btnStart.disabled    = true;
+  
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'inline-flex';
+    btnPause.textContent = 'Pause';
+    btnPause.disabled    = false;
+  }
+
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'inline-flex';
+    btnStop.disabled = false;
+  }
+  
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+
+  runEyeTimer(endTime);
+}
+
+function runEyeTimer(endTime) {
+  if (eyeInterval) clearInterval(eyeInterval);
 
   eyeInterval = setInterval(() => {
-    eyeSeconds--;
-    const m = String(Math.floor(eyeSeconds / 60)).padStart(2, '0');
-    const s = String(eyeSeconds % 60).padStart(2, '0');
-    document.getElementById('eyeCountdown').textContent = `${m}:${s}`;
+    const countdown = document.getElementById('eyeCountdown');
+    if (!countdown) {
+      clearInterval(eyeInterval);
+      return;
+    }
 
-    if (eyeSeconds <= 0) {
+    if (eyePaused) return; // Keep countdown frozen if paused
+
+    const remainingMs = endTime - Date.now();
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    eyeSeconds = remainingSec;
+
+    const m = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+    const s = String(remainingSec % 60).padStart(2, '0');
+    countdown.textContent = `${m}:${s}`;
+
+    if (remainingSec <= 0) {
       clearInterval(eyeInterval);
       eyeActive = false;
-      document.getElementById('btnEyeDone').disabled = false;
+      localStorage.removeItem('eyeTimerActive');
+      localStorage.removeItem('eyeTimerEndTime');
+      localStorage.removeItem('eyeTimerPaused');
+      localStorage.removeItem('eyeTimerRemainingMs');
+      
+      const btnDone = document.getElementById('btnEyeDone');
+      if (btnDone) btnDone.disabled = false;
+      
+      const btnPause = document.getElementById('btnEyePause');
+      if (btnPause) {
+        btnPause.style.display = 'none';
+      }
+
+      const btnStop = document.getElementById('btnEyeStop');
+      if (btnStop) {
+        btnStop.style.display = 'none';
+      }
+
       openEyeModal();
     }
   }, 1000);
 }
 
+function togglePauseEyeTimer() {
+  if (!eyeActive) return;
+
+  const btnPause = document.getElementById('btnEyePause');
+  if (!btnPause) return;
+
+  if (!eyePaused) {
+    // Pause it!
+    eyePaused = true;
+    
+    // Clear ticking interval
+    if (eyeInterval) clearInterval(eyeInterval);
+
+    // Save exactly how much time is left
+    const endTimeStr = localStorage.getItem('eyeTimerEndTime');
+    let remainingMs = 20 * 60 * 1000;
+    if (endTimeStr) {
+      remainingMs = Math.max(0, parseInt(endTimeStr) - Date.now());
+    }
+    
+    localStorage.setItem('eyeTimerPaused', 'true');
+    localStorage.setItem('eyeTimerRemainingMs', remainingMs.toString());
+
+    // Update UI
+    btnPause.textContent = 'Resume';
+    showToast('⏸️ Eye-care timer paused!');
+  } else {
+    // Resume it!
+    eyePaused = false;
+
+    // Retrieve remaining ms
+    const remainingMsStr = localStorage.getItem('eyeTimerRemainingMs') || (20 * 60 * 1000).toString();
+    const remainingMs = parseInt(remainingMsStr);
+    
+    const newEndTime = Date.now() + remainingMs;
+    localStorage.setItem('eyeTimerEndTime', newEndTime.toString());
+    localStorage.removeItem('eyeTimerPaused');
+    localStorage.removeItem('eyeTimerRemainingMs');
+
+    // Update UI
+    btnPause.textContent = 'Pause';
+    showToast('▶️ Eye-care timer resumed!');
+
+    // Start ticking again
+    runEyeTimer(newEndTime);
+  }
+}
+
+function stopEyeTimer() {
+  if (eyeInterval) clearInterval(eyeInterval);
+  eyeActive  = false;
+  eyePaused  = false;
+  eyeSeconds = 20 * 60;
+  
+  localStorage.removeItem('eyeTimerActive');
+  localStorage.removeItem('eyeTimerEndTime');
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  // Reset UI
+  const countdown = document.getElementById('eyeCountdown');
+  if (countdown) countdown.textContent = '20:00';
+  
+  const btnStart = document.getElementById('btnEyeStart');
+  if (btnStart) {
+    btnStart.textContent = 'Start Timer';
+    btnStart.disabled    = false;
+  }
+  
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'none';
+  }
+
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'none';
+  }
+  
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+}
+
+function restoreEyeTimer() {
+  const btnStart = document.getElementById('btnEyeStart');
+  const countdown = document.getElementById('eyeCountdown');
+  const btnPause = document.getElementById('btnEyePause');
+  const btnStop = document.getElementById('btnEyeStop');
+  const btnDone = document.getElementById('btnEyeDone');
+  
+  if (!btnStart || !countdown) return; // Guard: not on dashboard/timer page!
+
+  const isActive = localStorage.getItem('eyeTimerActive') === 'true';
+  if (!isActive) return;
+
+  const isPaused = localStorage.getItem('eyeTimerPaused') === 'true';
+
+  if (isPaused) {
+    eyeActive = true;
+    eyePaused = true;
+
+    const remainingMsStr = localStorage.getItem('eyeTimerRemainingMs') || (20 * 60 * 1000).toString();
+    const remainingMs = parseInt(remainingMsStr);
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    eyeSeconds = remainingSec;
+
+    const m = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+    const s = String(remainingSec % 60).padStart(2, '0');
+    countdown.textContent = `${m}:${s}`;
+
+    // Set UI states
+    btnStart.textContent = '⏳ Running…';
+    btnStart.disabled    = true;
+    
+    if (btnPause) {
+      btnPause.style.display = 'inline-flex';
+      btnPause.textContent = 'Resume';
+      btnPause.disabled    = false;
+    }
+    if (btnStop) {
+      btnStop.style.display = 'inline-flex';
+      btnStop.disabled = false;
+    }
+    if (btnDone) btnDone.disabled = true;
+
+  } else {
+    // Active and NOT paused
+    const endTimeStr = localStorage.getItem('eyeTimerEndTime');
+    if (!endTimeStr) return;
+
+    const endTime = parseInt(endTimeStr);
+    const remainingMs = endTime - Date.now();
+
+    if (remainingMs > 0) {
+      eyeActive = true;
+      eyePaused = false;
+      
+      // Set UI states
+      btnStart.textContent = '⏳ Running…';
+      btnStart.disabled    = true;
+      
+      if (btnPause) {
+        btnPause.style.display = 'inline-flex';
+        btnPause.textContent = 'Pause';
+        btnPause.disabled    = false;
+      }
+      if (btnStop) {
+        btnStop.style.display = 'inline-flex';
+        btnStop.disabled = false;
+      }
+      if (btnDone) btnDone.disabled = true;
+
+      // Run active tick
+      runEyeTimer(endTime);
+    } else {
+      // Elapsed while tab was closed/offline
+      eyeActive = false;
+      eyePaused = false;
+      localStorage.removeItem('eyeTimerActive');
+      localStorage.removeItem('eyeTimerEndTime');
+      localStorage.removeItem('eyeTimerPaused');
+      localStorage.removeItem('eyeTimerRemainingMs');
+      
+      countdown.textContent = '00:00';
+      
+      btnStart.textContent = 'Start Timer';
+      btnStart.disabled    = false;
+      
+      if (btnPause) {
+        btnPause.style.display = 'none';
+      }
+      if (btnStop) {
+        btnStop.style.display = 'none';
+      }
+      if (btnDone) btnDone.disabled = false;
+      
+      // Alert the user that their eye break has completed
+      openEyeModal();
+    }
+  }
+}
+
 function openEyeModal() {
-  document.getElementById('eyeModal').classList.add('open');
+  const modal = document.getElementById('eyeModal');
+  if (modal) modal.classList.add('open');
   playNotificationSound();
 }
 
 function closeEyeModal() {
-  document.getElementById('eyeModal').classList.remove('open');
+  const modal = document.getElementById('eyeModal');
+  if (modal) modal.classList.remove('open');
   logEyeBreak();
 }
 
@@ -497,18 +786,43 @@ async function logEyeBreak() {
   await fetch('/api/eye_care', { method: 'POST' });
 
   // Reset timer
-  clearInterval(eyeInterval);
+  if (eyeInterval) clearInterval(eyeInterval);
   eyeActive  = false;
+  eyePaused  = false;
   eyeSeconds = 20 * 60;
-  document.getElementById('eyeCountdown').textContent = '20:00';
-  document.getElementById('btnEyeStart').textContent  = 'Start Timer';
-  document.getElementById('btnEyeStart').disabled     = false;
-  document.getElementById('btnEyeDone').disabled      = true;
+  
+  localStorage.removeItem('eyeTimerActive');
+  localStorage.removeItem('eyeTimerEndTime');
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  const countdown = document.getElementById('eyeCountdown');
+  if (countdown) countdown.textContent = '20:00';
+
+  const btnStart = document.getElementById('btnEyeStart');
+  if (btnStart) {
+    btnStart.textContent  = 'Start Timer';
+    btnStart.disabled     = false;
+  }
+
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'none';
+  }
+  
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'none';
+  }
 
   // Update count
   const res = await fetch('/api/eye_care/count');
   const data = await res.json();
-  document.getElementById('statEye').textContent = data.count;
+  const statEye = document.getElementById('statEye');
+  if (statEye) statEye.textContent = data.count;
 
   showToast('👁️ Eye break logged! Great job caring for your eyes.');
 }
@@ -896,14 +1210,14 @@ function selectDay(data, index) {
       let color = '#ff6e40';
       if (score >= 80) {
         label = 'EXCELLENT';
-        bgColor = 'rgba(0, 230, 118, 0.12)';
-        borderColor = 'rgba(0, 230, 118, 0.25)';
-        color = '#00e676';
+        bgColor = 'var(--green-glow)';
+        borderColor = 'var(--border-glass)';
+        color = 'var(--green-vivid)';
       } else if (score >= 60) {
         label = 'GOOD';
-        bgColor = 'rgba(105, 240, 174, 0.12)';
-        borderColor = 'rgba(105, 240, 174, 0.25)';
-        color = '#69f0ae';
+        bgColor = 'var(--green-glow-sm)';
+        borderColor = 'var(--border-glass)';
+        color = 'var(--green-mid)';
       } else if (score >= 40) {
         label = 'FAIR';
         bgColor = 'rgba(255, 215, 64, 0.12)';
@@ -1423,6 +1737,121 @@ async function updateAccount() {
   }
 }
 
+async function deleteAccount() {
+  if (!confirm("Are you absolutely sure you want to permanently delete your account? This action cannot be undone and all data will be lost.")) {
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/account', {
+      method: 'DELETE'
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      // Redirect to login page after deletion
+      window.location.href = '/login';
+    } else {
+      alert(data.error || 'Failed to delete account.');
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+  }
+}
+
+function togglePasswordSection() {
+  const section = document.getElementById('passwordSection');
+  const arrow = document.getElementById('pwdSecArrow');
+  
+  // Clear any existing banners
+  const errBanner = document.getElementById('pwdErrorBanner');
+  const succBanner = document.getElementById('pwdSuccessBanner');
+  if (errBanner) errBanner.style.display = 'none';
+  if (succBanner) succBanner.style.display = 'none';
+
+  if (section.style.display === 'none' || section.style.display === '') {
+    section.style.display = 'flex';
+    arrow.textContent = '▲';
+  } else {
+    section.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+  const errBanner = document.getElementById('pwdErrorBanner');
+  const errText = document.getElementById('pwdErrorText');
+  const succBanner = document.getElementById('pwdSuccessBanner');
+  const succText = document.getElementById('pwdSuccessText');
+
+  function showError(msg) {
+    if (succBanner) succBanner.style.display = 'none';
+    if (errText && errBanner) {
+      errText.textContent = msg;
+      errBanner.style.display = 'flex';
+    }
+  }
+
+  function showSuccess(msg) {
+    if (errBanner) errBanner.style.display = 'none';
+    if (succText && succBanner) {
+      succText.textContent = msg;
+      succBanner.style.display = 'flex';
+    }
+  }
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    showError('Please fill in all password fields.');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showError('New password must be at least 6 characters.');
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    showError('New passwords do not match.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/user/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmNewPassword
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showSuccess('Password updated successfully!');
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmNewPassword').value = '';
+      
+      // Auto-hide success banner and close password section after 2 seconds
+      setTimeout(() => {
+        if (succBanner) succBanner.style.display = 'none';
+        togglePasswordSection();
+      }, 2000);
+    } else {
+      showError(data.error || 'Failed to update password.');
+    }
+  } catch (e) {
+    showError('Network error. Please try again.');
+  }
+}
+
 function handleImagePreview(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
@@ -1459,6 +1888,9 @@ document.addEventListener('click', (e) => {
 
 // Welcome the user and set up click listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore persistent eye timer state if active!
+  restoreEyeTimer();
+
   // Initialize notification sound selection value
   const selector = document.getElementById('soundSelector');
   if (selector) {

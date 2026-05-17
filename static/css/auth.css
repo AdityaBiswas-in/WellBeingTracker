@@ -210,7 +210,7 @@ body { overflow: hidden; }
   position: absolute; left: .95rem;
   font-size: .9rem; pointer-events: none;
   z-index: 1; line-height: 1;
-  filter: grayscale(.3) opacity(.6);
+  opacity: .65;
 }
 
 .auth-input {

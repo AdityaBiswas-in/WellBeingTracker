@@ -139,12 +139,13 @@
             </div>
           </div>
 
-          <div class="auth-options">
+          <div class="auth-options" style="display: flex; justify-content: space-between; align-items: center;">
             <label class="remember-label">
               <input type="checkbox" id="rememberMe" name="remember" checked />
               <span class="custom-check"></span>
               Keep me signed in
             </label>
+            <a href="/forgot-password" class="forgot-pwd-link" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color var(--transition);" onmouseover="this.style.color='var(--text-primary)';" onmouseout="this.style.color='var(--text-muted)';">Forgot Password?</a>
           </div>
 
           <button type="submit" class="btn-green btn-lg auth-btn" id="loginBtn">
