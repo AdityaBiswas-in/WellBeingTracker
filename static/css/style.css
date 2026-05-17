@@ -1159,3 +1159,149 @@ select.date-input option, .date-input option {
     justify-content: space-between;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE & RESPONSIVE BREAKPOINTS
+   ══════════════════════════════════════════════════════════════ */
+
+/* Tablet & Smaller Devices (max-width: 768px) */
+@media (max-width: 768px) {
+  /* Navbar Overhaul */
+  .navbar {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .nav-date {
+    display: none; /* Hide date on tablet and mobile to save precious vertical space */
+  }
+  .nav-logo {
+    order: 1;
+  }
+  .nav-user {
+    order: 2;
+  }
+  .nav-tabs {
+    order: 3;
+    width: 100%;
+    margin-top: 0.75rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    gap: 0.25rem;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-tab {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.85rem;
+  }
+  
+  /* Main padding */
+  .main-container {
+    padding: 1.25rem 1rem 3rem;
+  }
+  
+  /* Score Hero Stacking */
+  .score-hero {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  /* Charts Layout Stacking */
+  .charts-row {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  /* Habits Layout Stacking */
+  .habits-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .habit-card {
+    padding: 1.25rem;
+  }
+  
+  /* Swipable Weekly Score Cards */
+  .weekly-scores {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.6rem;
+    padding-bottom: 0.5rem;
+    scrollbar-width: none;
+  }
+  .weekly-scores::-webkit-scrollbar {
+    display: none;
+  }
+  .day-score-card {
+    flex: 1;
+    min-width: 72px;
+    padding: 0.75rem 0.4rem;
+  }
+}
+
+/* Mobile Devices (max-width: 600px) */
+@media (max-width: 600px) {
+  /* Forms Layout */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  .log-hero {
+    padding: 1.5rem 1.25rem;
+  }
+  /* Edit Profile Modal Grid Overrides */
+  .edit-modal .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Compact Mobile Devices (max-width: 480px) */
+@media (max-width: 480px) {
+  /* Dynamic Quick Stats optimization */
+  .quick-stats {
+    gap: 0.75rem;
+  }
+  .stat-card {
+    padding: 0.85rem 1rem;
+    gap: 0.5rem;
+  }
+  .stat-icon {
+    font-size: 1.4rem;
+  }
+  .stat-val {
+    font-size: 1.1rem;
+  }
+  .stat-name {
+    font-size: 0.7rem;
+  }
+  
+  /* Logged session rows compression */
+  .session-item {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+  .session-app {
+    font-size: 0.9rem;
+  }
+  .session-cat {
+    font-size: 0.75rem;
+  }
+  .session-time {
+    font-size: 0.95rem;
+  }
+  
+  /* Titles font size matching */
+  .section-title {
+    font-size: 1.3rem;
+  }
+  .card-title {
+    font-size: 0.95rem;
+  }
+}
