@@ -85,7 +85,7 @@ let doughnutChart = null;
 let weeklyChart   = null;
 let currentWeekOffset  = 0;
 let currentWeeklyData  = null;
-let weeklyChartStyle   = 'area'; // 'area', 'bar', 'trend'
+let weeklyChartStyle   = 'bar'; // 'area', 'bar', 'trend'
 let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // 'short', 'long', 'alarm'
 
 // ── Eye-care timer ────────────────────────────────────────────
