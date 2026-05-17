@@ -2,23 +2,97 @@
    Digital Well-Being Tracker  ·  app.js
    ═══════════════════════════════════════════════════════════════ */
 
+// ── Namespaced localStorage for Multi-Account support ─────────
+const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks'];
+
+function getNamespacedKey(key) {
+  if (userSpecificKeys.includes(key)) {
+    const user = window.CURRENT_USERNAME || 'default';
+    return `${key}_${user}`;
+  }
+  return key;
+}
+
+const originalGetItem = localStorage.getItem;
+const originalSetItem = localStorage.setItem;
+const originalRemoveItem = localStorage.removeItem;
+
+localStorage.getItem = function(key) {
+  return originalGetItem.call(localStorage, getNamespacedKey(key));
+};
+
+localStorage.setItem = function(key, value) {
+  originalSetItem.call(localStorage, getNamespacedKey(key), value);
+};
+
+localStorage.removeItem = function(key) {
+  originalRemoveItem.call(localStorage, getNamespacedKey(key));
+};
+
 // ── Category colours (must match CSS tokens) ─────────────────
 const CAT_COLORS = {
-  study:         '#00e676',
-  entertainment: '#ff6e40',
-  social:        '#40c4ff',
-  work:          '#ffd740',
-  other:         '#b39ddb',
+  get study() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#2e7d32' : '#00e676';
+  },
+  get entertainment() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#d84315' : '#ff6e40';
+  },
+  get social() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#0277bd' : '#40c4ff';
+  },
+  get work() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#f57f17' : '#ffd740';
+  },
+  get other() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return isLight ? '#651fff' : '#b39ddb';
+  }
 };
+
+// ── Theme Toggle ───────────────────────────────────────────────
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+
+  // Force a re-render of current charts and particles to grab new colors
+  loadDashboard();
+  loadWeekly(currentWeekOffset);
+}
+
+// Load saved theme immediately to prevent flashing
+(function loadTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    window.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+    });
+  }
+})();
 
 // ── Chart instances ───────────────────────────────────────────
 let doughnutChart = null;
 let weeklyChart   = null;
+let currentWeekOffset  = 0;
+let currentWeeklyData  = null;
+let weeklyChartStyle   = 'area'; // 'area', 'bar', 'trend'
+let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // 'short', 'long', 'alarm'
 
 // ── Eye-care timer ────────────────────────────────────────────
 let eyeInterval   = null;
 let eyeSeconds    = 20 * 60;   // 20 minutes
 let eyeActive     = false;
+let eyePaused     = false;
 
 // ══════════════════════════════════════════════════════════════
 // PARTICLE BACKGROUND
@@ -49,11 +123,14 @@ let eyeActive     = false;
   }
 
   function draw() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const rgb = isLight ? '0,162,255' : '0,230,118';
+
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(0,230,118,${p.a})`;
+      ctx.fillStyle = `rgba(${rgb},${p.a})`;
       ctx.fill();
 
       p.x += p.vx; p.y += p.vy;
@@ -71,7 +148,7 @@ let eyeActive     = false;
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = `rgba(0,230,118,${0.06 * (1 - dist / 100)})`;
+          ctx.strokeStyle = `rgba(${rgb},${0.06 * (1 - dist / 100)})`;
           ctx.lineWidth   = 0.6;
           ctx.stroke();
         }
@@ -125,8 +202,9 @@ function fmtMin(minutes) {
 }
 
 function scoreColor(score) {
-  if (score >= 80) return '#00e676';
-  if (score >= 60) return '#69f0ae';
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (score >= 80) return isLight ? '#007acc' : '#00e676';
+  if (score >= 60) return isLight ? '#00a2ff' : '#69f0ae';
   if (score >= 40) return '#ffd740';
   return '#ff6e40';
 }
@@ -206,9 +284,11 @@ function updateScoreRing(score) {
   const offset = circumference - (score / 100) * circumference;
   const color  = scoreColor(score);
 
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
   fillEl.style.strokeDashoffset = offset;
   fillEl.style.stroke           = color;
-  fillEl.style.filter           = `drop-shadow(0 0 8px ${color})`;
+  fillEl.style.filter           = isLight ? `drop-shadow(0 2px 4px rgba(0, 122, 204, 0.3))` : `drop-shadow(0 0 8px ${color})`;
 
   animateValue(scoreNumEl, parseInt(scoreNumEl.textContent) || 0, score);
   subtitleEl.textContent = scoreSubtitleText(score);
@@ -426,32 +506,279 @@ function preset(appName, category, minutes) {
 // ══════════════════════════════════════════════════════════════
 function startEyeTimer() {
   if (eyeActive) return;
+  
+  const btnStart = document.getElementById('btnEyeStart');
+  if (!btnStart) return;
+
   eyeActive  = true;
-  eyeSeconds = 20 * 60;
-  document.getElementById('btnEyeStart').textContent = '⏳ Running…';
-  document.getElementById('btnEyeStart').disabled    = true;
+  eyePaused  = false;
+  
+  const endTime = Date.now() + 20 * 60 * 1000;
+  localStorage.setItem('eyeTimerActive', 'true');
+  localStorage.setItem('eyeTimerEndTime', endTime.toString());
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  // Update UI button states
+  btnStart.textContent = '⏳ Running…';
+  btnStart.disabled    = true;
+  
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'inline-flex';
+    btnPause.textContent = 'Pause';
+    btnPause.disabled    = false;
+  }
+
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'inline-flex';
+    btnStop.disabled = false;
+  }
+  
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+
+  runEyeTimer(endTime);
+}
+
+function runEyeTimer(endTime) {
+  if (eyeInterval) clearInterval(eyeInterval);
 
   eyeInterval = setInterval(() => {
-    eyeSeconds--;
-    const m = String(Math.floor(eyeSeconds / 60)).padStart(2, '0');
-    const s = String(eyeSeconds % 60).padStart(2, '0');
-    document.getElementById('eyeCountdown').textContent = `${m}:${s}`;
+    const countdown = document.getElementById('eyeCountdown');
+    if (!countdown) {
+      clearInterval(eyeInterval);
+      return;
+    }
 
-    if (eyeSeconds <= 0) {
+    if (eyePaused) return; // Keep countdown frozen if paused
+
+    const remainingMs = endTime - Date.now();
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    eyeSeconds = remainingSec;
+
+    const m = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+    const s = String(remainingSec % 60).padStart(2, '0');
+    countdown.textContent = `${m}:${s}`;
+
+    if (remainingSec <= 0) {
       clearInterval(eyeInterval);
       eyeActive = false;
-      document.getElementById('btnEyeDone').disabled = false;
+      localStorage.removeItem('eyeTimerActive');
+      localStorage.removeItem('eyeTimerEndTime');
+      localStorage.removeItem('eyeTimerPaused');
+      localStorage.removeItem('eyeTimerRemainingMs');
+      
+      const btnDone = document.getElementById('btnEyeDone');
+      if (btnDone) btnDone.disabled = false;
+      
+      const btnPause = document.getElementById('btnEyePause');
+      if (btnPause) {
+        btnPause.style.display = 'none';
+      }
+
+      const btnStop = document.getElementById('btnEyeStop');
+      if (btnStop) {
+        btnStop.style.display = 'none';
+      }
+
       openEyeModal();
     }
   }, 1000);
 }
 
+function togglePauseEyeTimer() {
+  if (!eyeActive) return;
+
+  const btnPause = document.getElementById('btnEyePause');
+  if (!btnPause) return;
+
+  if (!eyePaused) {
+    // Pause it!
+    eyePaused = true;
+    
+    // Clear ticking interval
+    if (eyeInterval) clearInterval(eyeInterval);
+
+    // Save exactly how much time is left
+    const endTimeStr = localStorage.getItem('eyeTimerEndTime');
+    let remainingMs = 20 * 60 * 1000;
+    if (endTimeStr) {
+      remainingMs = Math.max(0, parseInt(endTimeStr) - Date.now());
+    }
+    
+    localStorage.setItem('eyeTimerPaused', 'true');
+    localStorage.setItem('eyeTimerRemainingMs', remainingMs.toString());
+
+    // Update UI
+    btnPause.textContent = 'Resume';
+    showToast('⏸️ Eye-care timer paused!');
+  } else {
+    // Resume it!
+    eyePaused = false;
+
+    // Retrieve remaining ms
+    const remainingMsStr = localStorage.getItem('eyeTimerRemainingMs') || (20 * 60 * 1000).toString();
+    const remainingMs = parseInt(remainingMsStr);
+    
+    const newEndTime = Date.now() + remainingMs;
+    localStorage.setItem('eyeTimerEndTime', newEndTime.toString());
+    localStorage.removeItem('eyeTimerPaused');
+    localStorage.removeItem('eyeTimerRemainingMs');
+
+    // Update UI
+    btnPause.textContent = 'Pause';
+    showToast('▶️ Eye-care timer resumed!');
+
+    // Start ticking again
+    runEyeTimer(newEndTime);
+  }
+}
+
+function stopEyeTimer() {
+  if (eyeInterval) clearInterval(eyeInterval);
+  eyeActive  = false;
+  eyePaused  = false;
+  eyeSeconds = 20 * 60;
+  
+  localStorage.removeItem('eyeTimerActive');
+  localStorage.removeItem('eyeTimerEndTime');
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  // Reset UI
+  const countdown = document.getElementById('eyeCountdown');
+  if (countdown) countdown.textContent = '20:00';
+  
+  const btnStart = document.getElementById('btnEyeStart');
+  if (btnStart) {
+    btnStart.textContent = 'Start Timer';
+    btnStart.disabled    = false;
+  }
+  
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'none';
+  }
+
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'none';
+  }
+  
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+}
+
+function restoreEyeTimer() {
+  const btnStart = document.getElementById('btnEyeStart');
+  const countdown = document.getElementById('eyeCountdown');
+  const btnPause = document.getElementById('btnEyePause');
+  const btnStop = document.getElementById('btnEyeStop');
+  const btnDone = document.getElementById('btnEyeDone');
+  
+  if (!btnStart || !countdown) return; // Guard: not on dashboard/timer page!
+
+  const isActive = localStorage.getItem('eyeTimerActive') === 'true';
+  if (!isActive) return;
+
+  const isPaused = localStorage.getItem('eyeTimerPaused') === 'true';
+
+  if (isPaused) {
+    eyeActive = true;
+    eyePaused = true;
+
+    const remainingMsStr = localStorage.getItem('eyeTimerRemainingMs') || (20 * 60 * 1000).toString();
+    const remainingMs = parseInt(remainingMsStr);
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    eyeSeconds = remainingSec;
+
+    const m = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+    const s = String(remainingSec % 60).padStart(2, '0');
+    countdown.textContent = `${m}:${s}`;
+
+    // Set UI states
+    btnStart.textContent = '⏳ Running…';
+    btnStart.disabled    = true;
+    
+    if (btnPause) {
+      btnPause.style.display = 'inline-flex';
+      btnPause.textContent = 'Resume';
+      btnPause.disabled    = false;
+    }
+    if (btnStop) {
+      btnStop.style.display = 'inline-flex';
+      btnStop.disabled = false;
+    }
+    if (btnDone) btnDone.disabled = true;
+
+  } else {
+    // Active and NOT paused
+    const endTimeStr = localStorage.getItem('eyeTimerEndTime');
+    if (!endTimeStr) return;
+
+    const endTime = parseInt(endTimeStr);
+    const remainingMs = endTime - Date.now();
+
+    if (remainingMs > 0) {
+      eyeActive = true;
+      eyePaused = false;
+      
+      // Set UI states
+      btnStart.textContent = '⏳ Running…';
+      btnStart.disabled    = true;
+      
+      if (btnPause) {
+        btnPause.style.display = 'inline-flex';
+        btnPause.textContent = 'Pause';
+        btnPause.disabled    = false;
+      }
+      if (btnStop) {
+        btnStop.style.display = 'inline-flex';
+        btnStop.disabled = false;
+      }
+      if (btnDone) btnDone.disabled = true;
+
+      // Run active tick
+      runEyeTimer(endTime);
+    } else {
+      // Elapsed while tab was closed/offline
+      eyeActive = false;
+      eyePaused = false;
+      localStorage.removeItem('eyeTimerActive');
+      localStorage.removeItem('eyeTimerEndTime');
+      localStorage.removeItem('eyeTimerPaused');
+      localStorage.removeItem('eyeTimerRemainingMs');
+      
+      countdown.textContent = '00:00';
+      
+      btnStart.textContent = 'Start Timer';
+      btnStart.disabled    = false;
+      
+      if (btnPause) {
+        btnPause.style.display = 'none';
+      }
+      if (btnStop) {
+        btnStop.style.display = 'none';
+      }
+      if (btnDone) btnDone.disabled = false;
+      
+      // Alert the user that their eye break has completed
+      openEyeModal();
+    }
+  }
+}
+
 function openEyeModal() {
-  document.getElementById('eyeModal').classList.add('open');
+  const modal = document.getElementById('eyeModal');
+  if (modal) modal.classList.add('open');
+  playNotificationSound();
 }
 
 function closeEyeModal() {
-  document.getElementById('eyeModal').classList.remove('open');
+  const modal = document.getElementById('eyeModal');
+  if (modal) modal.classList.remove('open');
   logEyeBreak();
 }
 
@@ -459,18 +786,43 @@ async function logEyeBreak() {
   await fetch('/api/eye_care', { method: 'POST' });
 
   // Reset timer
-  clearInterval(eyeInterval);
+  if (eyeInterval) clearInterval(eyeInterval);
   eyeActive  = false;
+  eyePaused  = false;
   eyeSeconds = 20 * 60;
-  document.getElementById('eyeCountdown').textContent = '20:00';
-  document.getElementById('btnEyeStart').textContent  = 'Start Timer';
-  document.getElementById('btnEyeStart').disabled     = false;
-  document.getElementById('btnEyeDone').disabled      = true;
+  
+  localStorage.removeItem('eyeTimerActive');
+  localStorage.removeItem('eyeTimerEndTime');
+  localStorage.removeItem('eyeTimerPaused');
+  localStorage.removeItem('eyeTimerRemainingMs');
+
+  const countdown = document.getElementById('eyeCountdown');
+  if (countdown) countdown.textContent = '20:00';
+
+  const btnStart = document.getElementById('btnEyeStart');
+  if (btnStart) {
+    btnStart.textContent  = 'Start Timer';
+    btnStart.disabled     = false;
+  }
+
+  const btnDone = document.getElementById('btnEyeDone');
+  if (btnDone) btnDone.disabled = true;
+
+  const btnPause = document.getElementById('btnEyePause');
+  if (btnPause) {
+    btnPause.style.display = 'none';
+  }
+  
+  const btnStop = document.getElementById('btnEyeStop');
+  if (btnStop) {
+    btnStop.style.display = 'none';
+  }
 
   // Update count
   const res = await fetch('/api/eye_care/count');
   const data = await res.json();
-  document.getElementById('statEye').textContent = data.count;
+  const statEye = document.getElementById('statEye');
+  if (statEye) statEye.textContent = data.count;
 
   showToast('👁️ Eye break logged! Great job caring for your eyes.');
 }
@@ -478,44 +830,252 @@ async function logEyeBreak() {
 // ══════════════════════════════════════════════════════════════
 // WEEKLY
 // ══════════════════════════════════════════════════════════════
-async function loadWeekly() {
-  const res  = await fetch('/api/weekly');
+async function loadWeekly(offset = currentWeekOffset) {
+  currentWeekOffset = offset;
+  
+  // Set dropdown value to match offset
+  const selectEl = document.getElementById('weeklyOffsetSelect');
+  if (selectEl) {
+    selectEl.value = offset;
+  }
+  
+  // Disable next button if offset is 0 (can't go into the future!)
+  const btnNext = document.getElementById('btnNextWeek');
+  if (btnNext) {
+    btnNext.disabled = (offset <= 0);
+  }
+  
+  // Disable prev button if offset is 12 (our maximum history)
+  const btnPrev = document.getElementById('btnPrevWeek');
+  if (btnPrev) {
+    btnPrev.disabled = (offset >= 12);
+  }
+
+  const res  = await fetch(`/api/weekly?week_offset=${offset}`);
   const data = await res.json();
+
+  // Dynamically update the header title based on the returned week dates!
+  if (data && data.length > 0) {
+    const startDateStr = formatDateLabel(data[0].date);
+    const endDateStr = formatDateLabel(data[data.length - 1].date);
+    const title = document.getElementById('weeklyTitle');
+    if (title) {
+      if (offset === 0) {
+        title.textContent = `This Week (${startDateStr} – ${endDateStr})`;
+      } else if (offset === 1) {
+        title.textContent = `Last Week (${startDateStr} – ${endDateStr})`;
+      } else {
+        title.textContent = `${offset} Weeks Ago (${startDateStr} – ${endDateStr})`;
+      }
+    }
+  }
 
   renderWeeklyChart(data);
   renderWeeklyScores(data);
+}
+
+function changeWeekOffset(offset) {
+  loadWeekly(offset);
+}
+
+function navigateWeek(dir) {
+  const newOffset = currentWeekOffset + dir;
+  if (newOffset >= 0 && newOffset <= 12) {
+    loadWeekly(newOffset);
+  }
+}
+
+function formatDateLabel(dateStr) {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function renderWeeklyChart(data) {
   const ctx = document.getElementById('weeklyChart').getContext('2d');
   if (weeklyChart) weeklyChart.destroy();
 
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const gridColor = isLight ? 'rgba(0,162,255,.08)' : 'rgba(0,230,118,.06)';
+  const tickColor = isLight ? '#57799c' : '#4a7c59';
+  const legendColor = isLight ? '#2b445e' : '#a5d6a7';
+  
+  // Custom point sizing depending on duration for premium responsiveness
+  let pointRadius = 0;
+  if (data.length <= 7) {
+    pointRadius = 4; // nice, tactile, large points for 7 days
+  } else if (data.length <= 30) {
+    pointRadius = 2; // smaller points for 30 days
+  } else {
+    pointRadius = 0; // hide points for 90 days to prevent clutter
+  }
+  
+  let datasets = [];
+  let chartType = 'line';
+  let scales = {};
+
+  if (weeklyChartStyle === 'area') {
+    chartType = 'line';
+    datasets = [
+      { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
+      { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
+      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
+      { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
+      { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
+    ].map(cat => ({
+      label: cat.label,
+      data: data.map(d => d[cat.key]),
+      backgroundColor: `${cat.color}25`, // semi-transparent area fill
+      borderColor: cat.color,
+      borderWidth: 2.5, // bold neon stroke look
+      fill: true,
+      tension: 0.4, // smooth curved line
+      pointRadius: pointRadius,
+      pointHoverRadius: pointRadius > 0 ? pointRadius + 3 : 5,
+      pointBackgroundColor: cat.color,
+      pointBorderColor: '#fff',
+      pointBorderWidth: pointRadius > 0 ? 1.5 : 0,
+    }));
+
+    scales = {
+      x: { 
+        stacked: false, 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      y: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+      },
+    };
+  } else if (weeklyChartStyle === 'bar') {
+    chartType = 'bar';
+    datasets = [
+      { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
+      { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
+      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
+      { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
+      { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
+    ].map(cat => ({
+      label: cat.label,
+      data: data.map(d => d[cat.key]),
+      backgroundColor: `${cat.color}99`,
+      borderRadius: 4,
+    }));
+
+    scales = {
+      x: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      y: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+      },
+    };
+  } else if (weeklyChartStyle === 'trend') {
+    chartType = 'bar'; // Root type is bar, line layers can override
+    
+    const scoreColorHex = isLight ? '#0070f3' : '#00e676';
+
+    datasets = [
+      {
+        type: 'line',
+        label: 'Digital Balance Score',
+        data: data.map(d => d.total > 0 ? d.balance_score : null), // null so empty days don't fall to 0
+        borderColor: scoreColorHex,
+        borderWidth: 3,
+        fill: false,
+        tension: 0.35,
+        pointRadius: pointRadius > 0 ? pointRadius + 1 : 3,
+        pointHoverRadius: pointRadius > 0 ? pointRadius + 4 : 6,
+        pointBackgroundColor: scoreColorHex,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        yAxisID: 'yScore',
+        spanGaps: true, // draw smooth connection between active days
+      },
+      {
+        type: 'bar',
+        label: 'Total Screen Time',
+        data: data.map(d => d.total),
+        backgroundColor: isLight ? 'rgba(87, 121, 156, 0.15)' : 'rgba(165, 214, 167, 0.12)',
+        borderColor: isLight ? 'rgba(87, 121, 156, 0.35)' : 'rgba(165, 214, 167, 0.25)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'yTime',
+      }
+    ];
+
+    scales = {
+      x: { 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      yScore: {
+        type: 'linear',
+        position: 'left',
+        min: 0,
+        max: 100,
+        grid: { color: gridColor },
+        ticks: { color: scoreColorHex, stepSize: 20 },
+        title: { display: true, text: 'Wellbeing Score', color: scoreColorHex, font: { weight: 'bold', family: 'Space Grotesk' } }
+      },
+      yTime: {
+        type: 'linear',
+        position: 'right',
+        grid: { drawOnChartArea: false }, // avoid duplicate horizontal lines
+        ticks: { color: tickColor, callback: v => fmtMin(v) },
+        title: { display: true, text: 'Screen Time', color: tickColor, font: { weight: 'bold', family: 'Space Grotesk' } }
+      }
+    };
+  }
+
   weeklyChart = new Chart(ctx, {
-    type: 'bar',
+    type: chartType,
     data: {
       labels: data.map(d => d.label),
-      datasets: [
-        { label: 'Study',         data: data.map(d => d.study),         backgroundColor: `${CAT_COLORS.study}99`,         borderRadius: 4 },
-        { label: 'Entertainment', data: data.map(d => d.entertainment), backgroundColor: `${CAT_COLORS.entertainment}99`, borderRadius: 4 },
-        { label: 'Social',        data: data.map(d => d.social),        backgroundColor: `${CAT_COLORS.social}99`,        borderRadius: 4 },
-        { label: 'Work',          data: data.map(d => d.work),          backgroundColor: `${CAT_COLORS.work}99`,          borderRadius: 4 },
-        { label: 'Other',         data: data.map(d => d.other),         backgroundColor: `${CAT_COLORS.other}99`,         borderRadius: 4 },
-      ],
+      datasets: datasets,
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (event, elements) => {
+        if (elements && elements.length > 0) {
+          const index = elements[0].index;
+          selectDay(data, index);
+        }
+      },
       plugins: {
         legend: {
-          labels: { color: '#a5d6a7', font: { size: 12 }, boxWidth: 14, boxHeight: 14 },
+          labels: { color: legendColor, font: { size: 12 }, boxWidth: 14, boxHeight: 14 },
           position: 'bottom',
         },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtMin(ctx.raw)}` } },
+        tooltip: { 
+          callbacks: { 
+            label: ctx => {
+              if (ctx.dataset.yAxisID === 'yScore') {
+                return ` ${ctx.dataset.label}: ${ctx.raw}`;
+              }
+              return ` ${ctx.dataset.label}: ${fmtMin(ctx.raw)}`;
+            }
+          } 
+        },
       },
-      scales: {
-        x: { stacked: true, grid: { color: 'rgba(0,230,118,.06)' }, ticks: { color: '#4a7c59' } },
-        y: { stacked: true, grid: { color: 'rgba(0,230,118,.06)' }, ticks: { color: '#4a7c59', callback: v => fmtMin(v) } },
-      },
+      scales: scales,
       animation: { duration: 900, easing: 'easeOutQuart' },
     },
   });
@@ -523,15 +1083,212 @@ function renderWeeklyChart(data) {
 
 function renderWeeklyScores(data) {
   const container = document.getElementById('weeklyScores');
-  container.innerHTML = data.map(d => {
-    const color = scoreColor(d.balance_score);
+  currentWeeklyData = data; // Cache data
+  
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="width: 100%; grid-column: 1 / -1; margin-top: 1rem;">
+        <span>🌱</span>
+        <p>No screen time sessions logged in this period.</p>
+      </div>`;
+    return;
+  }
+
+  // Map each day with its original index
+  const cardsData = data.map((d, origIndex) => ({ ...d, origIndex }));
+
+  // For longer ranges (30 or 90 days), filter out empty days to keep the dashboard pristine
+  let displayedCards = cardsData;
+  if (data.length > 7) {
+    displayedCards = cardsData.filter(d => d.total > 0);
+  }
+
+  if (displayedCards.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="width: 100%; grid-column: 1 / -1; margin-top: 1rem;">
+        <span>🌱</span>
+        <p>No active screen time sessions logged in this period.</p>
+      </div>`;
+    return;
+  }
+  
+  container.innerHTML = displayedCards.map((d) => {
+    const hasData = d.total > 0;
+    const scoreText = hasData ? d.balance_score : '–';
+    const color = hasData ? scoreColor(d.balance_score) : 'var(--text-muted)';
+    const cardOpacity = hasData ? '1' : '0.5';
     return `
-      <div class="day-score-card">
+      <div class="day-score-card" data-index="${d.origIndex}" style="opacity: ${cardOpacity};">
         <div class="day-label">${d.label}</div>
-        <div class="day-score" style="color:${color}">${d.balance_score}</div>
-        <div class="day-total">${d.total > 0 ? fmtMin(d.total) : '–'}</div>
+        <div class="day-score" style="color: ${color}; font-weight: ${hasData ? '700' : '400'};">${scoreText}</div>
+        <div class="day-total">${hasData ? fmtMin(d.total) : '–'}</div>
       </div>`;
   }).join('');
+
+  // Add click listeners to cards
+  container.querySelectorAll('.day-score-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.getAttribute('data-index'));
+      selectDay(data, idx);
+    });
+  });
+
+  // Default to selecting the most recent day that has data
+  let defaultIdx = data.length - 1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].total > 0) {
+      defaultIdx = i;
+      break;
+    }
+  }
+  
+  if (data.length > 0) {
+    selectDay(data, defaultIdx);
+  }
+}
+
+function selectDay(data, index) {
+  const selected = data[index];
+  if (!selected) return;
+
+  // Update card highlights
+  const cards = document.querySelectorAll('.day-score-card');
+  cards.forEach((card) => {
+    const origIdx = parseInt(card.getAttribute('data-index'));
+    if (origIdx === index) {
+      card.classList.add('active');
+      card.style.opacity = '1'; // make active card fully bright
+      // Smoothly scroll active card to the center of the timeline
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    } else {
+      card.classList.remove('active');
+      const dayData = data[origIdx];
+      const hasData = dayData && dayData.total > 0;
+      card.style.opacity = hasData ? '1' : '0.5'; // restore default opacity
+    }
+  });
+
+  // Display detail panel
+  const panel = document.getElementById('selectedDayContainer');
+  if (panel) panel.style.display = 'block';
+
+  // Update Title
+  const title = document.getElementById('detailDayTitle');
+  if (title) title.textContent = selected.label;
+
+  // Update Score
+  const scoreNum = document.getElementById('detailScoreNum');
+  const scoreText = selected.total > 0 ? selected.balance_score : '–';
+  if (scoreNum) {
+    scoreNum.textContent = scoreText;
+    scoreNum.style.color = selected.total > 0 ? scoreColor(selected.balance_score) : 'var(--text-muted)';
+  }
+
+  // Update Score Ring
+  const ring = document.getElementById('detailScoreRing');
+  if (ring) {
+    const radius = 48;
+    const circumference = 2 * Math.PI * radius; // 301.6
+    if (selected.total > 0) {
+      const offset = circumference - (selected.balance_score / 100) * circumference;
+      ring.style.strokeDashoffset = offset;
+      ring.style.stroke = scoreColor(selected.balance_score);
+    } else {
+      ring.style.strokeDashoffset = circumference; // empty
+      ring.style.stroke = 'var(--green-glow)';
+    }
+  }
+
+  // Update Score Badge
+  const badge = document.getElementById('detailScoreBadge');
+  if (badge) {
+    if (selected.total > 0) {
+      const score = selected.balance_score;
+      let label = 'POOR';
+      let bgColor = 'rgba(255, 110, 64, 0.12)';
+      let borderColor = 'rgba(255, 110, 64, 0.25)';
+      let color = '#ff6e40';
+      if (score >= 80) {
+        label = 'EXCELLENT';
+        bgColor = 'var(--green-glow)';
+        borderColor = 'var(--border-glass)';
+        color = 'var(--green-vivid)';
+      } else if (score >= 60) {
+        label = 'GOOD';
+        bgColor = 'var(--green-glow-sm)';
+        borderColor = 'var(--border-glass)';
+        color = 'var(--green-mid)';
+      } else if (score >= 40) {
+        label = 'FAIR';
+        bgColor = 'rgba(255, 215, 64, 0.12)';
+        borderColor = 'rgba(255, 215, 64, 0.25)';
+        color = '#ffd740';
+      }
+      badge.textContent = label;
+      badge.style.background = bgColor;
+      badge.style.border = `1px solid ${borderColor}`;
+      badge.style.color = color;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.textContent = 'NO DATA';
+      badge.style.background = 'rgba(255, 255, 255, 0.05)';
+      badge.style.border = '1px solid var(--border-glass)';
+      badge.style.color = 'var(--text-muted)';
+      badge.style.display = 'inline-block';
+    }
+  }
+
+  // Update Total Time
+  const totalTime = document.getElementById('detailTotalTime');
+  if (totalTime) {
+    totalTime.textContent = selected.total > 0 ? fmtMin(selected.total) : '0m';
+  }
+
+  // Update Category List Breakdown
+  const catList = document.getElementById('detailCatsList');
+  if (catList) {
+    const cats = [
+      { name: 'Study', key: 'study', emoji: '📖', color: 'var(--cat-study)' },
+      { name: 'Entertainment', key: 'entertainment', emoji: '🍿', color: 'var(--cat-ent)' },
+      { name: 'Social', key: 'social', emoji: '💬', color: 'var(--cat-social)' },
+      { name: 'Work', key: 'work', emoji: '💼', color: 'var(--cat-work)' },
+      { name: 'Other', key: 'other', emoji: '🧩', color: 'var(--cat-other)' },
+    ];
+    
+    catList.innerHTML = cats.map(cat => {
+      const val = selected[cat.key] || 0;
+      const pct = selected.total > 0 ? (val / selected.total) * 100 : 0;
+      return `
+        <div class="detail-cat-row">
+          <div class="detail-cat-info">
+            <span style="color: ${cat.color}; font-weight: 500;">${cat.emoji} ${cat.name}</span>
+            <span style="color: var(--text-primary); font-weight: 600;">${fmtMin(val)} (${Math.round(pct)}%)</span>
+          </div>
+          <div class="detail-cat-bar-track">
+            <div class="detail-cat-bar-fill" style="width: ${pct}%; background: ${cat.color}; box-shadow: 0 0 6px ${cat.color}88;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function changeChartStyle(style) {
+  weeklyChartStyle = style;
+  
+  // Update toggle button active states
+  document.querySelectorAll('.style-btn').forEach(btn => {
+    if (btn.getAttribute('data-style') === style) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Re-render chart if cache is present
+  if (currentWeeklyData) {
+    renderWeeklyChart(currentWeeklyData);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -657,25 +1414,75 @@ function playNotificationSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-    osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1); // C6
-    
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
+    const now = ctx.currentTime;
+
+    if (notificationSoundStyle === 'short') {
+      // ⚡ Standard Chirp (Short, 0.5s)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (notificationSoundStyle === 'long') {
+      // 🎵 Calming Zen Chimes (Long, ~2.5s)
+      const notes = [329.63, 392.00, 493.88, 659.25, 987.77]; // E4, G4, B4, E5, B5 (Warm Em7 chord)
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'triangle'; // Warm, flute-like tone
+        osc.frequency.setValueAtTime(freq, now + idx * 0.18); // Arpeggiated sequence
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.015, now + idx * 0.18 + 0.5); // Subtle vibration
+        
+        gain.gain.setValueAtTime(0, now + idx * 0.18);
+        gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.18 + 0.05); // Soft attack
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 1.5); // Very long decay
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.18);
+        osc.stop(now + idx * 0.18 + 1.6);
+      });
+    } else if (notificationSoundStyle === 'alarm') {
+      // 🔔 Repeating Chime Alarm (Extra Long, ~3.0s)
+      // Pulse 3 double-beeps spaced out
+      const alarmBeeps = [0, 0.15, 0.8, 0.95, 1.6, 1.75]; // Timings for double beeps
+      alarmBeeps.forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880.00, now + delay); // A5 note
+        
+        gain.gain.setValueAtTime(0, now + delay);
+        gain.gain.linearRampToValueAtTime(0.25, now + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.25);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.3);
+      });
+    }
   } catch (e) {
     console.error("Audio playback failed", e);
   }
+}
+
+function changeSoundStyle(style) {
+  notificationSoundStyle = style;
+  localStorage.setItem('sound_style', style);
+  playNotificationSound(); // instantly preview the newly selected sound!
 }
 
 // ── Send a push notification ────────────────────────────────────
@@ -685,6 +1492,9 @@ function sendNotification(appName, usedMin, limitMin) {
   notifiedToday.add(appName.toLowerCase());
 
   playNotificationSound();
+  
+  // Also show the pop-in instructor
+  showInstructor(`You've reached your limit for ${appName}! Time to take a break. 🌿`, 8000);
 
   new Notification(`⏰ Time limit reached: ${appName}`, {
     body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
@@ -820,3 +1630,295 @@ async function checkAndNotify() {
   } catch { /* silently ignore network errors */ }
 }
 
+// ══════════════════════════════════════════════════════════════
+// POP-IN INSTRUCTOR
+// ══════════════════════════════════════════════════════════════
+const INSTRUCTOR_MESSAGES = [
+  "Welcome! I'm here to help you maintain your WellBeingTracker! ✨",
+  "Use the Dashboard to see your WellBeing Score. Aim for 80 or higher! 📈",
+  "Don't forget to log your study and entertainment sessions. 📚",
+  "The 20-20-20 rule is great for eye care. I'll remind you to take breaks! 👁️",
+  "You can set Time Limits for any app. I'll pop up if you go over! ⏰",
+  "Check out the Habits tab for some daily wellness tips! 🌿",
+  "Having a diverse set of activities boosts your WellBeing Score. Try something new! 🎨",
+];
+let messageIndex = 0;
+
+let instructorTimeout = null;
+
+function showInstructor(message, duration = 6000) {
+  const container = document.getElementById('instructor-container');
+  const msgEl = document.getElementById('instructor-message');
+  const bubble = document.getElementById('instructor-bubble');
+  
+  if (!container || !msgEl || !bubble) return;
+  
+  // If a specific message is provided, use it. Otherwise, cycle through the info messages.
+  if (message) {
+    msgEl.textContent = message;
+  } else {
+    msgEl.textContent = INSTRUCTOR_MESSAGES[messageIndex];
+    messageIndex = (messageIndex + 1) % INSTRUCTOR_MESSAGES.length;
+  }
+  
+  // Ensure the character stays visible
+  container.classList.remove('instructor-hidden');
+  container.classList.add('instructor-visible');
+  
+  // Show the bubble
+  bubble.classList.add('bubble-visible');
+  
+  // Reset the timeout so clicking it again keeps it open
+  if (instructorTimeout) clearTimeout(instructorTimeout);
+  
+  instructorTimeout = setTimeout(() => {
+    bubble.classList.remove('bubble-visible');
+  }, duration);
+}
+
+// ══════════════════════════════════════════════════════════════
+// USER DROPDOWN & ACCOUNT
+// ══════════════════════════════════════════════════════════════
+function toggleUserDropdown() {
+  const menu = document.getElementById('userDropdownMenu');
+  const btn  = document.getElementById('userDropdownTrigger');
+  if (!menu || !btn) return;
+  
+  const isActive = menu.classList.toggle('active');
+  btn.setAttribute('aria-expanded', isActive);
+}
+
+function openEditAccountModal() {
+  document.getElementById('userDropdownMenu').classList.remove('active');
+  document.getElementById('editAccountModal').classList.add('active');
+}
+
+function closeEditAccountModal() {
+  document.getElementById('editAccountModal').classList.remove('active');
+}
+
+async function updateAccount() {
+  const username = document.getElementById('editUsername').value.trim();
+  const email    = document.getElementById('editEmail').value.trim();
+  const phone    = document.getElementById('editPhone').value.trim();
+  const bio      = document.getElementById('editBio').value.trim();
+  const gender   = document.getElementById('editGender').value;
+  const avatar   = document.getElementById('editAvatar').files[0];
+  
+  if (!username || !email || !gender) {
+    alert('Please fill in all mandatory fields, including gender.');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('email', email);
+  formData.append('phone', phone);
+  formData.append('bio', bio);
+  formData.append('gender', gender);
+  if (avatar) {
+    formData.append('avatar', avatar);
+  }
+  
+  try {
+    const res = await fetch('/api/user/update', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Update failed');
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+  }
+}
+
+async function deleteAccount() {
+  if (!confirm("Are you absolutely sure you want to permanently delete your account? This action cannot be undone and all data will be lost.")) {
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/account', {
+      method: 'DELETE'
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      // Redirect to login page after deletion
+      window.location.href = '/login';
+    } else {
+      alert(data.error || 'Failed to delete account.');
+    }
+  } catch (e) {
+    alert('Network error. Please try again.');
+  }
+}
+
+function togglePasswordSection() {
+  const section = document.getElementById('passwordSection');
+  const arrow = document.getElementById('pwdSecArrow');
+  
+  // Clear any existing banners
+  const errBanner = document.getElementById('pwdErrorBanner');
+  const succBanner = document.getElementById('pwdSuccessBanner');
+  if (errBanner) errBanner.style.display = 'none';
+  if (succBanner) succBanner.style.display = 'none';
+
+  if (section.style.display === 'none' || section.style.display === '') {
+    section.style.display = 'flex';
+    arrow.textContent = '▲';
+  } else {
+    section.style.display = 'none';
+    arrow.textContent = '▼';
+  }
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+  const errBanner = document.getElementById('pwdErrorBanner');
+  const errText = document.getElementById('pwdErrorText');
+  const succBanner = document.getElementById('pwdSuccessBanner');
+  const succText = document.getElementById('pwdSuccessText');
+
+  function showError(msg) {
+    if (succBanner) succBanner.style.display = 'none';
+    if (errText && errBanner) {
+      errText.textContent = msg;
+      errBanner.style.display = 'flex';
+    }
+  }
+
+  function showSuccess(msg) {
+    if (errBanner) errBanner.style.display = 'none';
+    if (succText && succBanner) {
+      succText.textContent = msg;
+      succBanner.style.display = 'flex';
+    }
+  }
+
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    showError('Please fill in all password fields.');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    showError('New password must be at least 6 characters.');
+    return;
+  }
+
+  if (newPassword !== confirmNewPassword) {
+    showError('New passwords do not match.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/user/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmNewPassword
+      })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      showSuccess('Password updated successfully!');
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmNewPassword').value = '';
+      
+      // Auto-hide success banner and close password section after 2 seconds
+      setTimeout(() => {
+        if (succBanner) succBanner.style.display = 'none';
+        togglePasswordSection();
+      }, 2000);
+    } else {
+      showError(data.error || 'Failed to update password.');
+    }
+  } catch (e) {
+    showError('Network error. Please try again.');
+  }
+}
+
+function handleImagePreview(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const previewContainer = document.getElementById('modalAvatarPreview');
+      let previewImg = document.getElementById('previewImg');
+      
+      if (!previewImg) {
+        // Replace initials with a new image element
+        const initials = document.getElementById('previewInitials');
+        if (initials) initials.remove();
+        
+        previewImg = document.createElement('img');
+        previewImg.id = 'previewImg';
+        previewImg.className = 'avatar-img';
+        previewContainer.appendChild(previewImg);
+      }
+      
+      previewImg.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Global click listener for dropdowns
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('userDropdownMenu');
+  const btn  = document.getElementById('userDropdownTrigger');
+  if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.classList.remove('active');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+// Welcome the user and set up click listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore persistent eye timer state if active!
+  restoreEyeTimer();
+
+  // Initialize notification sound selection value
+  const selector = document.getElementById('soundSelector');
+  if (selector) {
+    selector.value = notificationSoundStyle;
+  }
+
+  setTimeout(() => {
+    showInstructor();
+  }, 1000);
+
+  const container = document.getElementById('instructor-container');
+  if (container) {
+    container.style.cursor = 'pointer';
+    container.addEventListener('click', (e) => {
+      // Prevent the global click listener from immediately catching this
+      e.stopPropagation();
+      showInstructor();
+    });
+  }
+
+  // Hide the bubble if the user clicks anywhere else
+  document.addEventListener('click', (e) => {
+    if (container && !container.contains(e.target)) {
+      const bubble = document.getElementById('instructor-bubble');
+      if (bubble && bubble.classList.contains('bubble-visible')) {
+        bubble.classList.remove('bubble-visible');
+        if (instructorTimeout) clearTimeout(instructorTimeout);
+      }
+    }
+  });
+});

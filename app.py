@@ -15,6 +15,10 @@ import secrets
 
 app = Flask(__name__)
 
+UPLOAD_FOLDER = os.path.join('static', 'uploads', 'avatars')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 # ─── Secret key (stable across restarts) ──────────────────────────────────────
 SECRET_KEY_FILE = os.path.join(os.path.dirname(__file__), '.secret_key')
 if os.path.exists(SECRET_KEY_FILE):
@@ -41,10 +45,15 @@ login_manager.login_view = 'login'
 login_manager.login_message = ''          # suppress default flash
 
 class User(UserMixin):
-    def __init__(self, id_, username, email):
-        self.id       = id_
-        self.username = username
-        self.email    = email
+    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None, switch_token=None):
+        self.id           = id_
+        self.username     = username
+        self.email        = email
+        self.phone        = phone
+        self.bio          = bio
+        self.avatar_url   = avatar_url
+        self.gender       = gender
+        self.switch_token = switch_token
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -52,7 +61,8 @@ def load_user(user_id):
     row  = conn.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
     conn.close()
     if row:
-        return User(row['id'], row['username'], row['email'])
+        u = dict(row)
+        return User(u['id'], u['username'], u['email'], u.get('phone'), u.get('bio'), u.get('avatar_url'), u.get('gender'), u.get('switch_token'))
     return None
 
 # ─── Database Initialization ───────────────────────────────────────────────────
@@ -63,13 +73,35 @@ def init_db():
     # Users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            username    TEXT    NOT NULL UNIQUE,
-            email       TEXT    NOT NULL UNIQUE,
-            password    TEXT    NOT NULL,
-            created_at  TEXT    DEFAULT (datetime('now'))
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            username     TEXT    NOT NULL UNIQUE,
+            email        TEXT    NOT NULL UNIQUE,
+            password     TEXT    NOT NULL,
+            phone        TEXT,
+            bio          TEXT,
+            avatar_url   TEXT,
+            gender       TEXT,
+            switch_token TEXT,
+            created_at   TEXT    DEFAULT (datetime('now'))
         )
     ''')
+
+    # Migration for existing users
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN phone TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN bio TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN avatar_url TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN gender TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN switch_token TEXT')
+    except: pass
 
     # Sessions table (scoped per user)
     c.execute('''
@@ -159,8 +191,9 @@ def signup():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm', '')
+        gender   = request.form.get('gender', '')
 
-        if not username or not email or not password:
+        if not username or not email or not password or not gender:
             error = 'All fields are required.'
         elif len(username) < 3:
             error = 'Username must be at least 3 characters.'
@@ -178,16 +211,17 @@ def signup():
                 conn.close()
             else:
                 hashed = generate_password_hash(password)
+                token = secrets.token_hex(16)
                 conn.execute(
-                    'INSERT INTO users (username, email, password) VALUES (?,?,?)',
-                    (username, email, hashed)
+                    'INSERT INTO users (username, email, password, gender, switch_token) VALUES (?,?,?,?,?)',
+                    (username, email, hashed, gender, token)
                 )
                 conn.commit()
                 user_row = conn.execute(
                     'SELECT * FROM users WHERE username=?', (username,)
                 ).fetchone()
                 conn.close()
-                user = User(user_row['id'], user_row['username'], user_row['email'])
+                user = User(user_row['id'], user_row['username'], user_row['email'], switch_token=token)
                 login_user(user, remember=True)
                 return redirect(url_for('index'))
 
@@ -222,6 +256,18 @@ def login():
     return render_template('login.html', error=error)
 
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    message = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        if email:
+            # For this local prototype, we will just show a success message
+            message = "If an account exists with that email, a password reset link has been sent."
+            
+    return render_template('forgot_password.html', message=message)
+
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -233,7 +279,127 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', username=current_user.username)
+    token = current_user.switch_token
+    if not token:
+        token = secrets.token_hex(16)
+        conn = get_db()
+        conn.execute('UPDATE users SET switch_token=? WHERE id=?', (token, current_user.id))
+        conn.commit()
+        conn.close()
+        current_user.switch_token = token
+
+    return render_template('index.html', 
+                           username=current_user.username,
+                           email=current_user.email,
+                           phone=current_user.phone or '',
+                           bio=current_user.bio or '',
+                           avatar_url=current_user.avatar_url or '',
+                           gender=current_user.gender or '',
+                           switch_token=token)
+
+
+@app.route('/api/account/switch', methods=['POST'])
+def switch_account():
+    data = request.get_json()
+    username = data.get('username', '').strip()
+    switch_token = data.get('switch_token', '').strip()
+    
+    if not username or not switch_token:
+        return jsonify({'error': 'Missing credentials'}), 400
+        
+    conn = get_db()
+    user_row = conn.execute(
+        'SELECT * FROM users WHERE LOWER(username)=LOWER(?) AND switch_token=?', 
+        (username, switch_token)
+    ).fetchone()
+    conn.close()
+    
+    if not user_row:
+        return jsonify({'error': 'Invalid switch token. Please login again.'}), 401
+        
+    user = User(user_row['id'], user_row['username'], user_row['email'])
+    login_user(user, remember=True)
+    
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/update', methods=['POST'])
+@login_required
+def update_user():
+    # Use form data instead of JSON to handle file uploads
+    new_username = request.form.get('username', '').strip()
+    new_email    = request.form.get('email', '').strip().lower()
+    new_phone    = request.form.get('phone', '').strip()
+    new_bio      = request.form.get('bio', '').strip()
+    new_gender   = request.form.get('gender', '').strip()
+    
+    if not new_username or not new_email or not new_gender:
+        return jsonify({'error': 'Username, email, and gender are required'}), 400
+        
+    avatar_url = current_user.avatar_url
+    
+    if 'avatar' in request.files:
+        file = request.files['avatar']
+        if file and file.filename != '':
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            if ext in ['jpg', 'jpeg', 'png', 'gif']:
+                filename = f"avatar_{current_user.id}_{secrets.token_hex(4)}.{ext}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                avatar_url = f"/static/uploads/avatars/{filename}"
+        
+    conn = get_db()
+    try:
+        conn.execute(
+            'UPDATE users SET username=?, email=?, phone=?, bio=?, avatar_url=?, gender=? WHERE id=?',
+            (new_username, new_email, new_phone, new_bio, avatar_url, new_gender, current_user.id)
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username or email already exists'}), 400
+    finally:
+        conn.close()
+        
+    # Update session
+    current_user.username   = new_username
+    current_user.email      = new_email
+    current_user.phone      = new_phone
+    current_user.bio        = new_bio
+    current_user.avatar_url = avatar_url
+    current_user.gender     = new_gender
+    
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/change-password', methods=['POST'])
+@login_required
+def change_password():
+    data = request.get_json()
+    current_pwd = data.get('current_password')
+    new_pwd = data.get('new_password')
+    confirm_pwd = data.get('confirm_password')
+
+    if not current_pwd or not new_pwd or not confirm_pwd:
+        return jsonify({'error': 'All password fields are required'}), 400
+
+    if len(new_pwd) < 6:
+        return jsonify({'error': 'New password must be at least 6 characters'}), 400
+
+    if new_pwd != confirm_pwd:
+        return jsonify({'error': 'New passwords do not match'}), 400
+
+    conn = get_db()
+    row = conn.execute('SELECT password FROM users WHERE id=?', (current_user.id,)).fetchone()
+    if not row or not check_password_hash(row['password'], current_pwd):
+        conn.close()
+        return jsonify({'error': 'Incorrect current password'}), 400
+
+    hashed = generate_password_hash(new_pwd)
+    conn.execute('UPDATE users SET password=? WHERE id=?', (hashed, current_user.id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
 
 
 @app.route('/api/sessions', methods=['POST'])
@@ -313,11 +479,19 @@ def daily_report():
 @app.route('/api/weekly', methods=['GET'])
 @login_required
 def weekly_report():
-    today   = date.today()
+    week_offset = request.args.get('week_offset', 0, type=int)
+    
+    # Restrict offset between 0 and 12 weeks back (approx 3 months) for security
+    week_offset = min(max(week_offset, 0), 12)
+    
+    # Subtracting offset * 7 days shifts the window back week-by-week
+    # Note: we want the 7 days ending at: today - offset * 7
+    today = date.today() - timedelta(days=week_offset * 7)
     results = []
-    conn    = get_db()
+    conn = get_db()
+    
     for i in range(6, -1, -1):
-        d    = (today - timedelta(days=i)).isoformat()
+        d = (today - timedelta(days=i)).isoformat()
         rows = conn.execute(
             'SELECT category, SUM(minutes) as total FROM sessions WHERE user_id=? AND date=? GROUP BY category',
             (current_user.id, d)
@@ -329,9 +503,13 @@ def weekly_report():
         work         = cats.get('work', 0)
         other        = cats.get('other', 0)
         total        = study + entertainment + social + work + other
+        
+        dt = datetime.strptime(d, '%Y-%m-%d')
+        label = dt.strftime('%a')
+            
         results.append({
             'date': d,
-            'label': datetime.strptime(d, '%Y-%m-%d').strftime('%a'),
+            'label': label,
             'total': total, 'study': study,
             'entertainment': entertainment, 'social': social,
             'work': work, 'other': other,
@@ -451,6 +629,19 @@ def check_limits():
 
     conn.close()
     return jsonify(results)
+@app.route('/api/account', methods=['DELETE'])
+@login_required
+def delete_account():
+    """Permanently delete the current user's account and all associated data."""
+    conn = get_db()
+    conn.execute('DELETE FROM sessions WHERE user_id=?', (current_user.id,))
+    conn.execute('DELETE FROM eye_care_log WHERE user_id=?', (current_user.id,))
+    conn.execute('DELETE FROM time_limits WHERE user_id=?', (current_user.id,))
+    conn.execute('DELETE FROM users WHERE id=?', (current_user.id,))
+    conn.commit()
+    conn.close()
+    logout_user()
+    return jsonify({'success': True})
 
 
 if __name__ == '__main__':

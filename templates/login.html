@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login · Digital Well-Being Tracker</title>
+  <title>Login · WellBeingTracker</title>
   <meta name="description" content="Sign in to your Digital Well-Being Tracker account and start monitoring your screen time." />
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,7 +30,7 @@
       <div class="brand-inner">
         <div class="brand-logo">
           <span class="logo-icon">🌿</span>
-          <span class="logo-text">Digital<span class="logo-accent">Balance</span></span>
+          <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
         </div>
         <h1 class="brand-headline"><strong>Track</strong> your digital life.<br/>Own your time.</h1>
         <p class="brand-sub">Monitor screen time, improve focus, and build healthier digital habits — all in one place.</p>
@@ -139,12 +139,13 @@
             </div>
           </div>
 
-          <div class="auth-options">
+          <div class="auth-options" style="display: flex; justify-content: space-between; align-items: center;">
             <label class="remember-label">
               <input type="checkbox" id="rememberMe" name="remember" checked />
               <span class="custom-check"></span>
               Keep me signed in
             </label>
+            <a href="/forgot-password" class="forgot-pwd-link" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color var(--transition);" onmouseover="this.style.color='var(--text-primary)';" onmouseout="this.style.color='var(--text-muted)';">Forgot Password?</a>
           </div>
 
           <button type="submit" class="btn-green btn-lg auth-btn" id="loginBtn">
