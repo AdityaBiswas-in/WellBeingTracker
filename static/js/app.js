@@ -23,7 +23,7 @@ function toggleTheme() {
 
   // Force a re-render of current charts and particles to grab new colors
   loadDashboard();
-  loadWeekly(currentWeeklyRange);
+  loadWeekly(currentWeekOffset);
 }
 
 // Load saved theme immediately to prevent flashing
@@ -41,7 +41,10 @@ function toggleTheme() {
 // ── Chart instances ───────────────────────────────────────────
 let doughnutChart = null;
 let weeklyChart   = null;
-let currentWeeklyRange = 7;
+let currentWeekOffset  = 0;
+let currentWeeklyData  = null;
+let weeklyChartStyle   = 'area'; // 'area', 'bar', 'trend'
+let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // 'short', 'long', 'alarm'
 
 // ── Eye-care timer ────────────────────────────────────────────
 let eyeInterval   = null;
@@ -482,6 +485,7 @@ function startEyeTimer() {
 
 function openEyeModal() {
   document.getElementById('eyeModal').classList.add('open');
+  playNotificationSound();
 }
 
 function closeEyeModal() {
@@ -512,23 +516,66 @@ async function logEyeBreak() {
 // ══════════════════════════════════════════════════════════════
 // WEEKLY
 // ══════════════════════════════════════════════════════════════
-async function loadWeekly(days = currentWeeklyRange) {
-  currentWeeklyRange = days;
-  const title = document.getElementById('weeklyTitle');
-  if (title) {
-    if (days === 365) title.textContent = '1-Year Overview';
-    else title.textContent = `${days}-Day Overview`;
+async function loadWeekly(offset = currentWeekOffset) {
+  currentWeekOffset = offset;
+  
+  // Set dropdown value to match offset
+  const selectEl = document.getElementById('weeklyOffsetSelect');
+  if (selectEl) {
+    selectEl.value = offset;
   }
   
-  const res  = await fetch(`/api/weekly?days=${days}`);
+  // Disable next button if offset is 0 (can't go into the future!)
+  const btnNext = document.getElementById('btnNextWeek');
+  if (btnNext) {
+    btnNext.disabled = (offset <= 0);
+  }
+  
+  // Disable prev button if offset is 12 (our maximum history)
+  const btnPrev = document.getElementById('btnPrevWeek');
+  if (btnPrev) {
+    btnPrev.disabled = (offset >= 12);
+  }
+
+  const res  = await fetch(`/api/weekly?week_offset=${offset}`);
   const data = await res.json();
+
+  // Dynamically update the header title based on the returned week dates!
+  if (data && data.length > 0) {
+    const startDateStr = formatDateLabel(data[0].date);
+    const endDateStr = formatDateLabel(data[data.length - 1].date);
+    const title = document.getElementById('weeklyTitle');
+    if (title) {
+      if (offset === 0) {
+        title.textContent = `This Week (${startDateStr} – ${endDateStr})`;
+      } else if (offset === 1) {
+        title.textContent = `Last Week (${startDateStr} – ${endDateStr})`;
+      } else {
+        title.textContent = `${offset} Weeks Ago (${startDateStr} – ${endDateStr})`;
+      }
+    }
+  }
 
   renderWeeklyChart(data);
   renderWeeklyScores(data);
 }
 
-function loadWeeklyStats(days) {
-  loadWeekly(parseInt(days));
+function changeWeekOffset(offset) {
+  loadWeekly(offset);
+}
+
+function navigateWeek(dir) {
+  const newOffset = currentWeekOffset + dir;
+  if (newOffset >= 0 && newOffset <= 12) {
+    loadWeekly(newOffset);
+  }
+}
+
+function formatDateLabel(dateStr) {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function renderWeeklyChart(data) {
@@ -539,33 +586,182 @@ function renderWeeklyChart(data) {
   const gridColor = isLight ? 'rgba(0,162,255,.08)' : 'rgba(0,230,118,.06)';
   const tickColor = isLight ? '#57799c' : '#4a7c59';
   const legendColor = isLight ? '#2b445e' : '#a5d6a7';
+  
+  // Custom point sizing depending on duration for premium responsiveness
+  let pointRadius = 0;
+  if (data.length <= 7) {
+    pointRadius = 4; // nice, tactile, large points for 7 days
+  } else if (data.length <= 30) {
+    pointRadius = 2; // smaller points for 30 days
+  } else {
+    pointRadius = 0; // hide points for 90 days to prevent clutter
+  }
+  
+  let datasets = [];
+  let chartType = 'line';
+  let scales = {};
+
+  if (weeklyChartStyle === 'area') {
+    chartType = 'line';
+    datasets = [
+      { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
+      { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
+      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
+      { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
+      { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
+    ].map(cat => ({
+      label: cat.label,
+      data: data.map(d => d[cat.key]),
+      backgroundColor: `${cat.color}25`, // semi-transparent area fill
+      borderColor: cat.color,
+      borderWidth: 2.5, // bold neon stroke look
+      fill: true,
+      tension: 0.4, // smooth curved line
+      pointRadius: pointRadius,
+      pointHoverRadius: pointRadius > 0 ? pointRadius + 3 : 5,
+      pointBackgroundColor: cat.color,
+      pointBorderColor: '#fff',
+      pointBorderWidth: pointRadius > 0 ? 1.5 : 0,
+    }));
+
+    scales = {
+      x: { 
+        stacked: false, 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      y: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+      },
+    };
+  } else if (weeklyChartStyle === 'bar') {
+    chartType = 'bar';
+    datasets = [
+      { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
+      { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
+      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
+      { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
+      { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
+    ].map(cat => ({
+      label: cat.label,
+      data: data.map(d => d[cat.key]),
+      backgroundColor: `${cat.color}99`,
+      borderRadius: 4,
+    }));
+
+    scales = {
+      x: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      y: { 
+        stacked: true, 
+        grid: { color: gridColor }, 
+        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+      },
+    };
+  } else if (weeklyChartStyle === 'trend') {
+    chartType = 'bar'; // Root type is bar, line layers can override
+    
+    const scoreColorHex = isLight ? '#0070f3' : '#00e676';
+
+    datasets = [
+      {
+        type: 'line',
+        label: 'Digital Balance Score',
+        data: data.map(d => d.total > 0 ? d.balance_score : null), // null so empty days don't fall to 0
+        borderColor: scoreColorHex,
+        borderWidth: 3,
+        fill: false,
+        tension: 0.35,
+        pointRadius: pointRadius > 0 ? pointRadius + 1 : 3,
+        pointHoverRadius: pointRadius > 0 ? pointRadius + 4 : 6,
+        pointBackgroundColor: scoreColorHex,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        yAxisID: 'yScore',
+        spanGaps: true, // draw smooth connection between active days
+      },
+      {
+        type: 'bar',
+        label: 'Total Screen Time',
+        data: data.map(d => d.total),
+        backgroundColor: isLight ? 'rgba(87, 121, 156, 0.15)' : 'rgba(165, 214, 167, 0.12)',
+        borderColor: isLight ? 'rgba(87, 121, 156, 0.35)' : 'rgba(165, 214, 167, 0.25)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'yTime',
+      }
+    ];
+
+    scales = {
+      x: { 
+        grid: { color: gridColor }, 
+        ticks: { 
+          color: tickColor,
+          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
+        } 
+      },
+      yScore: {
+        type: 'linear',
+        position: 'left',
+        min: 0,
+        max: 100,
+        grid: { color: gridColor },
+        ticks: { color: scoreColorHex, stepSize: 20 },
+        title: { display: true, text: 'Wellbeing Score', color: scoreColorHex, font: { weight: 'bold', family: 'Space Grotesk' } }
+      },
+      yTime: {
+        type: 'linear',
+        position: 'right',
+        grid: { drawOnChartArea: false }, // avoid duplicate horizontal lines
+        ticks: { color: tickColor, callback: v => fmtMin(v) },
+        title: { display: true, text: 'Screen Time', color: tickColor, font: { weight: 'bold', family: 'Space Grotesk' } }
+      }
+    };
+  }
 
   weeklyChart = new Chart(ctx, {
-    type: 'bar',
+    type: chartType,
     data: {
       labels: data.map(d => d.label),
-      datasets: [
-        { label: 'Study',         data: data.map(d => d.study),         backgroundColor: `${CAT_COLORS.study}99`,         borderRadius: 4 },
-        { label: 'Entertainment', data: data.map(d => d.entertainment), backgroundColor: `${CAT_COLORS.entertainment}99`, borderRadius: 4 },
-        { label: 'Social',        data: data.map(d => d.social),        backgroundColor: `${CAT_COLORS.social}99`,        borderRadius: 4 },
-        { label: 'Work',          data: data.map(d => d.work),          backgroundColor: `${CAT_COLORS.work}99`,          borderRadius: 4 },
-        { label: 'Other',         data: data.map(d => d.other),         backgroundColor: `${CAT_COLORS.other}99`,         borderRadius: 4 },
-      ],
+      datasets: datasets,
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (event, elements) => {
+        if (elements && elements.length > 0) {
+          const index = elements[0].index;
+          selectDay(data, index);
+        }
+      },
       plugins: {
         legend: {
           labels: { color: legendColor, font: { size: 12 }, boxWidth: 14, boxHeight: 14 },
           position: 'bottom',
         },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtMin(ctx.raw)}` } },
+        tooltip: { 
+          callbacks: { 
+            label: ctx => {
+              if (ctx.dataset.yAxisID === 'yScore') {
+                return ` ${ctx.dataset.label}: ${ctx.raw}`;
+              }
+              return ` ${ctx.dataset.label}: ${fmtMin(ctx.raw)}`;
+            }
+          } 
+        },
       },
-      scales: {
-        x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor } },
-        y: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, callback: v => fmtMin(v) } },
-      },
+      scales: scales,
       animation: { duration: 900, easing: 'easeOutQuart' },
     },
   });
@@ -573,15 +769,212 @@ function renderWeeklyChart(data) {
 
 function renderWeeklyScores(data) {
   const container = document.getElementById('weeklyScores');
-  container.innerHTML = data.map(d => {
-    const color = scoreColor(d.balance_score);
+  currentWeeklyData = data; // Cache data
+  
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="width: 100%; grid-column: 1 / -1; margin-top: 1rem;">
+        <span>🌱</span>
+        <p>No screen time sessions logged in this period.</p>
+      </div>`;
+    return;
+  }
+
+  // Map each day with its original index
+  const cardsData = data.map((d, origIndex) => ({ ...d, origIndex }));
+
+  // For longer ranges (30 or 90 days), filter out empty days to keep the dashboard pristine
+  let displayedCards = cardsData;
+  if (data.length > 7) {
+    displayedCards = cardsData.filter(d => d.total > 0);
+  }
+
+  if (displayedCards.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="width: 100%; grid-column: 1 / -1; margin-top: 1rem;">
+        <span>🌱</span>
+        <p>No active screen time sessions logged in this period.</p>
+      </div>`;
+    return;
+  }
+  
+  container.innerHTML = displayedCards.map((d) => {
+    const hasData = d.total > 0;
+    const scoreText = hasData ? d.balance_score : '–';
+    const color = hasData ? scoreColor(d.balance_score) : 'var(--text-muted)';
+    const cardOpacity = hasData ? '1' : '0.5';
     return `
-      <div class="day-score-card">
+      <div class="day-score-card" data-index="${d.origIndex}" style="opacity: ${cardOpacity};">
         <div class="day-label">${d.label}</div>
-        <div class="day-score" style="color:${color}">${d.balance_score}</div>
-        <div class="day-total">${d.total > 0 ? fmtMin(d.total) : '–'}</div>
+        <div class="day-score" style="color: ${color}; font-weight: ${hasData ? '700' : '400'};">${scoreText}</div>
+        <div class="day-total">${hasData ? fmtMin(d.total) : '–'}</div>
       </div>`;
   }).join('');
+
+  // Add click listeners to cards
+  container.querySelectorAll('.day-score-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.getAttribute('data-index'));
+      selectDay(data, idx);
+    });
+  });
+
+  // Default to selecting the most recent day that has data
+  let defaultIdx = data.length - 1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].total > 0) {
+      defaultIdx = i;
+      break;
+    }
+  }
+  
+  if (data.length > 0) {
+    selectDay(data, defaultIdx);
+  }
+}
+
+function selectDay(data, index) {
+  const selected = data[index];
+  if (!selected) return;
+
+  // Update card highlights
+  const cards = document.querySelectorAll('.day-score-card');
+  cards.forEach((card) => {
+    const origIdx = parseInt(card.getAttribute('data-index'));
+    if (origIdx === index) {
+      card.classList.add('active');
+      card.style.opacity = '1'; // make active card fully bright
+      // Smoothly scroll active card to the center of the timeline
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    } else {
+      card.classList.remove('active');
+      const dayData = data[origIdx];
+      const hasData = dayData && dayData.total > 0;
+      card.style.opacity = hasData ? '1' : '0.5'; // restore default opacity
+    }
+  });
+
+  // Display detail panel
+  const panel = document.getElementById('selectedDayContainer');
+  if (panel) panel.style.display = 'block';
+
+  // Update Title
+  const title = document.getElementById('detailDayTitle');
+  if (title) title.textContent = selected.label;
+
+  // Update Score
+  const scoreNum = document.getElementById('detailScoreNum');
+  const scoreText = selected.total > 0 ? selected.balance_score : '–';
+  if (scoreNum) {
+    scoreNum.textContent = scoreText;
+    scoreNum.style.color = selected.total > 0 ? scoreColor(selected.balance_score) : 'var(--text-muted)';
+  }
+
+  // Update Score Ring
+  const ring = document.getElementById('detailScoreRing');
+  if (ring) {
+    const radius = 48;
+    const circumference = 2 * Math.PI * radius; // 301.6
+    if (selected.total > 0) {
+      const offset = circumference - (selected.balance_score / 100) * circumference;
+      ring.style.strokeDashoffset = offset;
+      ring.style.stroke = scoreColor(selected.balance_score);
+    } else {
+      ring.style.strokeDashoffset = circumference; // empty
+      ring.style.stroke = 'var(--green-glow)';
+    }
+  }
+
+  // Update Score Badge
+  const badge = document.getElementById('detailScoreBadge');
+  if (badge) {
+    if (selected.total > 0) {
+      const score = selected.balance_score;
+      let label = 'POOR';
+      let bgColor = 'rgba(255, 110, 64, 0.12)';
+      let borderColor = 'rgba(255, 110, 64, 0.25)';
+      let color = '#ff6e40';
+      if (score >= 80) {
+        label = 'EXCELLENT';
+        bgColor = 'rgba(0, 230, 118, 0.12)';
+        borderColor = 'rgba(0, 230, 118, 0.25)';
+        color = '#00e676';
+      } else if (score >= 60) {
+        label = 'GOOD';
+        bgColor = 'rgba(105, 240, 174, 0.12)';
+        borderColor = 'rgba(105, 240, 174, 0.25)';
+        color = '#69f0ae';
+      } else if (score >= 40) {
+        label = 'FAIR';
+        bgColor = 'rgba(255, 215, 64, 0.12)';
+        borderColor = 'rgba(255, 215, 64, 0.25)';
+        color = '#ffd740';
+      }
+      badge.textContent = label;
+      badge.style.background = bgColor;
+      badge.style.border = `1px solid ${borderColor}`;
+      badge.style.color = color;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.textContent = 'NO DATA';
+      badge.style.background = 'rgba(255, 255, 255, 0.05)';
+      badge.style.border = '1px solid var(--border-glass)';
+      badge.style.color = 'var(--text-muted)';
+      badge.style.display = 'inline-block';
+    }
+  }
+
+  // Update Total Time
+  const totalTime = document.getElementById('detailTotalTime');
+  if (totalTime) {
+    totalTime.textContent = selected.total > 0 ? fmtMin(selected.total) : '0m';
+  }
+
+  // Update Category List Breakdown
+  const catList = document.getElementById('detailCatsList');
+  if (catList) {
+    const cats = [
+      { name: 'Study', key: 'study', emoji: '📖', color: 'var(--cat-study)' },
+      { name: 'Entertainment', key: 'entertainment', emoji: '🍿', color: 'var(--cat-ent)' },
+      { name: 'Social', key: 'social', emoji: '💬', color: 'var(--cat-social)' },
+      { name: 'Work', key: 'work', emoji: '💼', color: 'var(--cat-work)' },
+      { name: 'Other', key: 'other', emoji: '🧩', color: 'var(--cat-other)' },
+    ];
+    
+    catList.innerHTML = cats.map(cat => {
+      const val = selected[cat.key] || 0;
+      const pct = selected.total > 0 ? (val / selected.total) * 100 : 0;
+      return `
+        <div class="detail-cat-row">
+          <div class="detail-cat-info">
+            <span style="color: ${cat.color}; font-weight: 500;">${cat.emoji} ${cat.name}</span>
+            <span style="color: var(--text-primary); font-weight: 600;">${fmtMin(val)} (${Math.round(pct)}%)</span>
+          </div>
+          <div class="detail-cat-bar-track">
+            <div class="detail-cat-bar-fill" style="width: ${pct}%; background: ${cat.color}; box-shadow: 0 0 6px ${cat.color}88;"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function changeChartStyle(style) {
+  weeklyChartStyle = style;
+  
+  // Update toggle button active states
+  document.querySelectorAll('.style-btn').forEach(btn => {
+    if (btn.getAttribute('data-style') === style) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Re-render chart if cache is present
+  if (currentWeeklyData) {
+    renderWeeklyChart(currentWeeklyData);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -707,25 +1100,75 @@ function playNotificationSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-    osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.1); // C6
-    
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
+    const now = ctx.currentTime;
+
+    if (notificationSoundStyle === 'short') {
+      // ⚡ Standard Chirp (Short, 0.5s)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (notificationSoundStyle === 'long') {
+      // 🎵 Calming Zen Chimes (Long, ~2.5s)
+      const notes = [329.63, 392.00, 493.88, 659.25, 987.77]; // E4, G4, B4, E5, B5 (Warm Em7 chord)
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'triangle'; // Warm, flute-like tone
+        osc.frequency.setValueAtTime(freq, now + idx * 0.18); // Arpeggiated sequence
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.015, now + idx * 0.18 + 0.5); // Subtle vibration
+        
+        gain.gain.setValueAtTime(0, now + idx * 0.18);
+        gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.18 + 0.05); // Soft attack
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 1.5); // Very long decay
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.18);
+        osc.stop(now + idx * 0.18 + 1.6);
+      });
+    } else if (notificationSoundStyle === 'alarm') {
+      // 🔔 Repeating Chime Alarm (Extra Long, ~3.0s)
+      // Pulse 3 double-beeps spaced out
+      const alarmBeeps = [0, 0.15, 0.8, 0.95, 1.6, 1.75]; // Timings for double beeps
+      alarmBeeps.forEach((delay) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880.00, now + delay); // A5 note
+        
+        gain.gain.setValueAtTime(0, now + delay);
+        gain.gain.linearRampToValueAtTime(0.25, now + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.25);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.3);
+      });
+    }
   } catch (e) {
     console.error("Audio playback failed", e);
   }
+}
+
+function changeSoundStyle(style) {
+  notificationSoundStyle = style;
+  localStorage.setItem('sound_style', style);
+  playNotificationSound(); // instantly preview the newly selected sound!
 }
 
 // ── Send a push notification ────────────────────────────────────
@@ -1016,6 +1459,12 @@ document.addEventListener('click', (e) => {
 
 // Welcome the user and set up click listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // Initialize notification sound selection value
+  const selector = document.getElementById('soundSelector');
+  if (selector) {
+    selector.value = notificationSoundStyle;
+  }
+
   setTimeout(() => {
     showInstructor();
   }, 1000);

@@ -394,16 +394,19 @@ def daily_report():
 @app.route('/api/weekly', methods=['GET'])
 @login_required
 def weekly_report():
-    days    = request.args.get('days', 7, type=int)
-    today   = date.today()
+    week_offset = request.args.get('week_offset', 0, type=int)
+    
+    # Restrict offset between 0 and 12 weeks back (approx 3 months) for security
+    week_offset = min(max(week_offset, 0), 12)
+    
+    # Subtracting offset * 7 days shifts the window back week-by-week
+    # Note: we want the 7 days ending at: today - offset * 7
+    today = date.today() - timedelta(days=week_offset * 7)
     results = []
-    conn    = get_db()
+    conn = get_db()
     
-    # Limit maximum days to 365 for safety
-    days = min(max(days, 1), 365)
-    
-    for i in range(days - 1, -1, -1):
-        d    = (today - timedelta(days=i)).isoformat()
+    for i in range(6, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
         rows = conn.execute(
             'SELECT category, SUM(minutes) as total FROM sessions WHERE user_id=? AND date=? GROUP BY category',
             (current_user.id, d)
@@ -416,14 +419,8 @@ def weekly_report():
         other        = cats.get('other', 0)
         total        = study + entertainment + social + work + other
         
-        # Format label based on range
         dt = datetime.strptime(d, '%Y-%m-%d')
-        if days <= 7:
-            label = dt.strftime('%a')
-        elif days <= 90:
-            label = dt.strftime('%b %d')
-        else:
-            label = dt.strftime('%b %y')
+        label = dt.strftime('%a')
             
         results.append({
             'date': d,

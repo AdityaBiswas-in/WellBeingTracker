@@ -179,7 +179,20 @@
 
           <!-- Eye-Care Reminder -->
           <div class="eye-care-panel">
-            <h3 class="eye-care-title">👁️ Eye-Care 20-20-20 Rule</h3>
+            <div class="eye-care-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <h3 class="eye-care-title" style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.35rem;">👁️ Eye-Care 20-20-20 Rule</h3>
+              
+              <!-- Sound Style Configurator -->
+              <div class="sound-control-wrap" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem;">
+                <span title="Alert Sound Style" style="color: var(--text-muted); font-size: 0.7rem; font-weight: 500;">🔊 Alert:</span>
+                <select id="soundSelector" onchange="changeSoundStyle(this.value)" title="Select notification alert sound style" aria-label="Select notification alert sound style" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; outline: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem;">
+                  <option value="long" style="background: var(--bg-card); color: var(--text-primary);">🎵 Zen Chimes</option>
+                  <option value="short" style="background: var(--bg-card); color: var(--text-primary);">⚡ Standard Chirp</option>
+                  <option value="alarm" style="background: var(--bg-card); color: var(--text-primary);">🔔 Alarm Bell</option>
+                </select>
+                <button onclick="playNotificationSound()" title="Test Sound Style" style="background: transparent; border: none; color: var(--green-vivid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; padding: 0 0.15rem; margin-left: 0.15rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">▶</button>
+              </div>
+            </div>
             <p class="eye-care-desc">Every <strong>20 minutes</strong>, look at something <strong>20 feet</strong> away for <strong>20 seconds</strong>.</p>
             <div class="eye-care-timer">
               <span id="eyeCountdown" class="countdown">20:00</span>
@@ -273,12 +286,33 @@
       <div class="glass-card weekly-card">
         <div class="weekly-header">
           <h2 class="section-title" id="weeklyTitle">7-Day Overview</h2>
-          <select id="weeklyRange" class="date-input" onchange="loadWeeklyStats(this.value)" aria-label="Select report range">
-            <option value="7">Last 7 Days</option>
-            <option value="30">Last 30 Days</option>
-            <option value="90">Last 90 Days</option>
-            <option value="365">Last Year</option>
-          </select>
+          <div class="weekly-controls" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <div class="chart-style-toggle" id="chartStyleToggle">
+              <button class="style-btn active" data-style="area" onclick="changeChartStyle('area')" title="Show Stacked Waves">📈 Waves</button>
+              <button class="style-btn" data-style="bar" onclick="changeChartStyle('bar')" title="Show Stacked Bars">📊 Bars</button>
+              <button class="style-btn" data-style="trend" onclick="changeChartStyle('trend')" title="Show Wellbeing Trend">🎯 Trend</button>
+            </div>
+            <!-- Week navigation controls -->
+            <div class="week-nav-wrap" style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.2rem;">
+              <button id="btnPrevWeek" onclick="navigateWeek(1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Previous Week">⬅</button>
+              <select id="weeklyOffsetSelect" class="date-input" onchange="changeWeekOffset(parseInt(this.value))" aria-label="Select Week" style="background: transparent; border: none; color: var(--text-primary); cursor: pointer; outline: none; font-weight: 600; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem; padding: 0.35rem 0.6rem; margin: 0; min-width: 110px;">
+                <option value="0" style="background: var(--bg-surface); color: var(--text-primary);">This Week</option>
+                <option value="1" style="background: var(--bg-surface); color: var(--text-primary);">Last Week</option>
+                <option value="2" style="background: var(--bg-surface); color: var(--text-primary);">2 Weeks Ago</option>
+                <option value="3" style="background: var(--bg-surface); color: var(--text-primary);">3 Weeks Ago</option>
+                <option value="4" style="background: var(--bg-surface); color: var(--text-primary);">4 Weeks Ago</option>
+                <option value="5" style="background: var(--bg-surface); color: var(--text-primary);">5 Weeks Ago</option>
+                <option value="6" style="background: var(--bg-surface); color: var(--text-primary);">6 Weeks Ago</option>
+                <option value="7" style="background: var(--bg-surface); color: var(--text-primary);">7 Weeks Ago</option>
+                <option value="8" style="background: var(--bg-surface); color: var(--text-primary);">8 Weeks Ago</option>
+                <option value="9" style="background: var(--bg-surface); color: var(--text-primary);">9 Weeks Ago</option>
+                <option value="10" style="background: var(--bg-surface); color: var(--text-primary);">10 Weeks Ago</option>
+                <option value="11" style="background: var(--bg-surface); color: var(--text-primary);">11 Weeks Ago</option>
+                <option value="12" style="background: var(--bg-surface); color: var(--text-primary);">12 Weeks Ago</option>
+              </select>
+              <button id="btnNextWeek" onclick="navigateWeek(-1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Next Week" disabled>➡</button>
+            </div>
+          </div>
         </div>
 
         <div class="weekly-bar-wrap">
@@ -286,6 +320,42 @@
         </div>
 
         <div class="weekly-scores" id="weeklyScores"></div>
+
+        <!-- Selected Day Details Container -->
+        <div class="selected-day-container" id="selectedDayContainer" style="display: none; margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 2rem;">
+          <h3 class="card-title" style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-family: 'Space Grotesk', sans-serif;">
+            <span>📅</span> Detailed Daily Breakdown: <span id="detailDayTitle" style="color: var(--green-vivid);">Sunday</span>
+          </h3>
+          <div class="selected-day-layout">
+            <!-- Left Panel: Score Ring -->
+            <div class="glass-card-inner detail-score-panel">
+              <div class="score-ring-wrap" style="width: 110px; height: 110px; margin: 0 auto 0.75rem;">
+                <svg class="score-ring" style="width: 110px; height: 110px; transform: rotate(-90deg);">
+                  <circle class="ring-bg" cx="55" cy="55" r="48" style="stroke-width: 6; fill: none; stroke: var(--green-glow);"></circle>
+                  <circle class="ring-fill" id="detailScoreRing" cx="55" cy="55" r="48" style="stroke-width: 6; fill: none; stroke: var(--green-vivid); stroke-linecap: round; stroke-dasharray: 301.6; stroke-dashoffset: 301.6; transition: stroke-dashoffset 0.8s ease;"></circle>
+                </svg>
+                <div class="score-inner">
+                  <span class="score-num" id="detailScoreNum" style="font-size: 2rem;">--</span>
+                </div>
+              </div>
+              <div class="score-badge" id="detailScoreBadge" style="margin-top: 0.5rem;">GOOD</div>
+            </div>
+            
+            <!-- Right Panel: Category Breakdown -->
+            <div class="glass-card-inner detail-breakdown-panel">
+              <div class="detail-header-row">
+                <span class="detail-header-title">Category Distribution</span>
+                <span class="detail-header-time" id="detailTotalTime">3h 15m</span>
+              </div>
+              <div class="detail-cats-list" id="detailCatsList">
+                <!-- Injected dynamically by JS -->
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted); font-style: italic;">
+            💡 Click any day card or bar on the chart above to inspect that day's detailed score.
+          </div>
+        </div>
 
         <!-- Score Legend -->
         <div class="score-legend glass-card-inner">
