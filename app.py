@@ -1,5 +1,5 @@
 # pyrefly: ignore [missing-import]
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_file
 # pyrefly: ignore [missing-import]
 from flask_login import (
     LoginManager, UserMixin,
@@ -584,6 +584,38 @@ def local_sync():
         return jsonify({'success': True, 'message': f'Synced successfully. Tracker is now streaming to {server_url}!'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/download/tracker')
+@login_required
+def download_tracker():
+    base_exe_path = os.path.join(app.root_path, 'static', 'downloads', 'tracker.exe')
+    
+    if not os.path.exists(base_exe_path):
+        # Create directory if missing
+        os.makedirs(os.path.dirname(base_exe_path), exist_ok=True)
+        return jsonify({
+            'error': 'tracker.exe is currently compiling on the server. Please download again in a few seconds!'
+        }), 404
+        
+    conn = get_db()
+    user_row = conn.execute('SELECT switch_token FROM users WHERE id=?', (current_user.id,)).fetchone()
+    conn.close()
+    
+    token = user_row['switch_token'] if user_row else None
+    if not token:
+        return 'Unauthorized', 401
+        
+    server_url = request.url_root.strip('/')
+    hex_url = server_url.encode('utf-8').hex()
+    
+    download_name = f"WellBeingTracker_setup_{token}_{hex_url}.exe"
+    
+    return send_file(
+        base_exe_path,
+        as_attachment=True,
+        download_name=download_name
+    )
 
 
 @app.route('/api/account/switch', methods=['POST'])

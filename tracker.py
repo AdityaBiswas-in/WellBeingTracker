@@ -20,7 +20,12 @@ print("""
 =========================================================
 """)
 
-CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.tracker_config.json')
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CONFIG_FILE = os.path.join(BASE_DIR, '.tracker_config.json')
 
 APP_MAP = {
     'chrome.exe': 'Chrome',
@@ -118,8 +123,8 @@ def clean_app_name(process_name):
 
 def load_config():
     config_paths = [
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), '.tracker_config.json'),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tracker_config.json')
+        os.path.join(BASE_DIR, '.tracker_config.json'),
+        os.path.join(BASE_DIR, 'tracker_config.json')
     ]
     for path in config_paths:
         if os.path.exists(path):
@@ -303,7 +308,7 @@ No configuration file found. Let's get you connected!
                     user_actual = res_data.get('username')
                     
                     # Write to config file (.tracker_config.json)
-                    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.tracker_config.json')
+                    config_path = os.path.join(BASE_DIR, '.tracker_config.json')
                     with open(config_path, 'w') as f:
                         json.dump({
                             'server_url': server_url,
@@ -415,11 +420,14 @@ def configure_startup(add=True):
     app_name = "WellBeingTracker"
     
     if add:
-        script_path = os.path.abspath(__file__)
-        pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
-        if not os.path.exists(pythonw_path):
-            pythonw_path = sys.executable
-        cmd = f'"{pythonw_path}" "{script_path}"'
+        if getattr(sys, 'frozen', False):
+            cmd = f'"{sys.executable}"'
+        else:
+            script_path = os.path.abspath(__file__)
+            pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
+            if not os.path.exists(pythonw_path):
+                pythonw_path = sys.executable
+            cmd = f'"{pythonw_path}" "{script_path}"'
         try:
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
             winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, cmd)
@@ -445,7 +453,45 @@ def configure_startup(add=True):
             return False
 
 
+def check_filename_config():
+    try:
+        if getattr(sys, 'frozen', False):
+            filename = os.path.basename(sys.executable)
+        else:
+            filename = os.path.basename(sys.argv[0])
+            
+        import re
+        match = re.search(r'WellBeingTracker_setup_([a-f0-9]{32})_([a-f0-9]+)', filename, re.IGNORECASE)
+        if match:
+            token = match.group(1)
+            hex_url = match.group(2)
+            try:
+                server_url = bytes.fromhex(hex_url).decode('utf-8')
+                if server_url.startswith('http'):
+                    config = {
+                        'server_url': server_url,
+                        'switch_token': token,
+                        'username': 'Auto-Configured Device'
+                    }
+                    config_path = os.path.join(BASE_DIR, '.tracker_config.json')
+                    with open(config_path, 'w') as f:
+                        json.dump(config, f)
+                    print(f"\n[+] Success: Auto-configured from filename!")
+                    print(f"    Server URL: {server_url}")
+                    print(f"    Switch Token: {token}\n")
+                    
+                    # Auto-register to run silently on startup!
+                    configure_startup(add=True)
+                    return True
+            except Exception as e:
+                print(f"[-] Failed to decode filename config: {e}")
+    except Exception as e:
+        print(f"[-] Error reading filename config: {e}")
+    return False
+
+
 if __name__ == "__main__":
+    check_filename_config()
     if len(sys.argv) > 1:
         arg = sys.argv[1].lower()
         if arg == '--startup':
