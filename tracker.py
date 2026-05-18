@@ -248,6 +248,91 @@ def show_warning_box(app_name, used_min, limit_min, sound_style='short'):
         )
     threading.Thread(target=target, daemon=True).start()
 
+def interactive_setup():
+    print("""
+=========================================================
+  WellBeing Tracker -- Background Agent Setup Wizard 🚀
+=========================================================
+No configuration file found. Let's get you connected!
+""")
+    
+    import getpass
+    
+    while True:
+        server_url = input("Enter your server URL [default: http://127.0.0.1:5000]: ").strip()
+        if not server_url:
+            server_url = "http://127.0.0.1:5000"
+            
+        # Clean trailing slashes
+        if server_url.endswith('/'):
+            server_url = server_url[:-1]
+            
+        username = input("Enter your username or email: ").strip()
+        if not username:
+            print("[-] Username cannot be empty. Please try again.")
+            continue
+            
+        password = getpass.getpass("Enter your password: ")
+        if not password:
+            print("[-] Password cannot be empty. Please try again.")
+            continue
+            
+        print("[*] Authenticating with the server...")
+        
+        # Call the API
+        url = f"{server_url}/api/tracker/authorize"
+        data = json.dumps({
+            "username": username,
+            "password": password
+        }).encode('utf-8')
+        
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        try:
+            with urllib.request.urlopen(req, timeout=8) as response:
+                if response.status == 200:
+                    res_body = response.read().decode('utf-8')
+                    res_data = json.loads(res_body)
+                    
+                    # Successfully authenticated!
+                    switch_token = res_data.get('switch_token')
+                    user_actual = res_data.get('username')
+                    
+                    # Write to config file (.tracker_config.json)
+                    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.tracker_config.json')
+                    with open(config_path, 'w') as f:
+                        json.dump({
+                            'server_url': server_url,
+                            'switch_token': switch_token,
+                            'username': user_actual
+                        }, f)
+                    
+                    print(f"\n[+] Authorization successful! Connected to {server_url} as {user_actual}.")
+                    print("[+] Configuration saved successfully.")
+                    time.sleep(2)
+                    return True
+        except urllib.error.HTTPError as e:
+            try:
+                err_data = json.loads(e.read().decode('utf-8'))
+                err_msg = err_data.get('error', 'Invalid credentials')
+            except Exception:
+                err_msg = f"HTTP Error {e.code}"
+            print(f"[-] Authentication failed: {err_msg}")
+        except urllib.error.URLError as e:
+            print(f"[-] Connection failed. Could not reach server at {server_url}: {e.reason}")
+        except Exception as e:
+            print(f"[-] An unexpected error occurred: {e}")
+            
+        retry = input("\nWould you like to try again? (y/n): ").strip().lower()
+        if retry != 'y':
+            print("[-] Setup cancelled. Exiting.")
+            sys.exit(0)
+
+
 def main():
     print("[*] Starting tracker loop (polling active window every 3 seconds)...")
     print(f"[*] Config file target: {CONFIG_FILE}\n")
@@ -265,19 +350,14 @@ def main():
             last_notified_date = current_date
             
         config = load_config()
-        if not config:
-            print("[-] No config file found. Please download tracker_config.json from your dashboard and place it in this folder.", end="\r")
-            time.sleep(3)
+        if not config or not config.get('switch_token'):
+            print("\n[-] Configuration not found or incomplete. Starting interactive setup wizard...")
+            interactive_setup()
             continue
             
         server_url = config.get('server_url', 'http://127.0.0.1:5000')
         switch_token = config.get('switch_token')
         username = config.get('username', 'Unknown User')
-        
-        if not switch_token:
-            print("[-] Missing switch_token in config file. Retrying...", end="\r")
-            time.sleep(3)
-            continue
             
         process_name = get_active_process_name()
         if process_name.lower() in IGNORE_LIST:

@@ -488,6 +488,40 @@ def index():
                            sound_style=current_user.sound_style or 'short')
 
 
+@app.route('/api/tracker/authorize', methods=['POST'])
+def tracker_authorize():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Missing username or password'}), 400
+        
+    conn = get_db()
+    user_row = conn.execute(
+        'SELECT * FROM users WHERE LOWER(username)=LOWER(?) OR LOWER(email)=LOWER(?)',
+        (username, username)
+    ).fetchone()
+    
+    if not user_row or not check_password_hash(user_row['password'], password):
+        conn.close()
+        return jsonify({'success': False, 'error': 'Invalid username/email or password'}), 401
+        
+    token = user_row['switch_token']
+    if not token:
+        token = secrets.token_hex(16)
+        conn.execute('UPDATE users SET switch_token=? WHERE id=?', (token, user_row['id']))
+        conn.commit()
+        
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'switch_token': token,
+        'username': user_row['username']
+    })
+
+
 @app.route('/api/account/switch', methods=['POST'])
 def switch_account():
     data = request.get_json()
