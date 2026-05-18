@@ -1,5 +1,5 @@
 # pyrefly: ignore [missing-import]
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 # pyrefly: ignore [missing-import]
 from flask_login import (
     LoginManager, UserMixin,
@@ -12,6 +12,10 @@ import json
 from datetime import datetime, date, timedelta
 import os
 import secrets
+import random
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 app = Flask(__name__)
 
@@ -45,7 +49,7 @@ login_manager.login_view = 'login'
 login_manager.login_message = ''          # suppress default flash
 
 class User(UserMixin):
-    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None, switch_token=None):
+    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None, switch_token=None, sound_style='short'):
         self.id           = id_
         self.username     = username
         self.email        = email
@@ -54,6 +58,7 @@ class User(UserMixin):
         self.avatar_url   = avatar_url
         self.gender       = gender
         self.switch_token = switch_token
+        self.sound_style  = sound_style
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -62,7 +67,17 @@ def load_user(user_id):
     conn.close()
     if row:
         u = dict(row)
-        return User(u['id'], u['username'], u['email'], u.get('phone'), u.get('bio'), u.get('avatar_url'), u.get('gender'), u.get('switch_token'))
+        return User(
+            u['id'], 
+            u['username'], 
+            u['email'], 
+            u.get('phone'), 
+            u.get('bio'), 
+            u.get('avatar_url'), 
+            u.get('gender'), 
+            u.get('switch_token'),
+            u.get('sound_style', 'short')
+        )
     return None
 
 # ─── Database Initialization ───────────────────────────────────────────────────
@@ -82,6 +97,7 @@ def init_db():
             avatar_url   TEXT,
             gender       TEXT,
             switch_token TEXT,
+            sound_style  TEXT    DEFAULT 'short',
             created_at   TEXT    DEFAULT (datetime('now'))
         )
     ''')
@@ -101,6 +117,9 @@ def init_db():
     except: pass
     try:
         c.execute('ALTER TABLE users ADD COLUMN switch_token TEXT')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN sound_style TEXT DEFAULT "short"')
     except: pass
 
     # Sessions table (scoped per user)
@@ -160,51 +179,37 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-def compute_balance_score(study_min, entertainment_min, social_min, work_min, other_min, total_min):
+def compute_balance_score(study_min, entertainment_min, social_min, work_min, other_min, total_min, eye_breaks=0):
     """
-    Digital Balance Score (0–100):
-    Dynamically responds to screen time increments:
-      - Promotes productive study/work time.
-      - Penalizes excessive social/entertainment time.
-      - Rewards a balanced distribution of activities.
-      - Smoothly scales down as total screen time increases.
+    Health-First Digital Balance Score (0–100):
+    - Incentivizes lower screen times (the lower the screen time, the higher the score).
+    - Substantially rewards frequent eye breaks (+8 points per break, up to +40).
+    - Offsets slightly for productive time vs excessive leisure screen time.
     """
     if total_min == 0:
-        return 0
+        return 100  # Perfect score for zero screen time
 
-    # 1. Base Score starts at 70 (neutral starting point for active days)
-    # 2. Time Penalty: Smoothly reduces score as total screen time grows.
-    #    - Under 2 hours (120 mins): No penalty.
-    #    - From 2 hours to 6 hours (360 mins): Gradual deduction (up to 15 points).
-    #    - Above 6 hours: Steeper deduction.
-    if total_min <= 120:
-        time_penalty = 0
-    elif total_min <= 360:
-        time_penalty = (total_min - 120) / 240 * 15
+    # 1. Base Score
+    base_score = 100
+
+    # 2. Smooth Time Penalty (deducts more as total screen time grows)
+    if total_min <= 60:
+        time_penalty = (total_min / 60) * 8
+    elif total_min <= 180:
+        time_penalty = 8 + ((total_min - 60) / 120) * 22
     else:
-        time_penalty = 15 + (total_min - 360) / 360 * 35
-    
-    # 3. Productivity Bonus:
-    #    - Each minute of 'study' adds +0.25 points.
-    #    - Each minute of 'work' adds +0.15 points.
-    #    - Capped at +30 points total.
-    prod_bonus = min(30, (study_min * 0.25) + (work_min * 0.15))
+        time_penalty = 30 + ((total_min - 180) / 300) * 50
 
-    # 4. Leisure & Social Penalty:
-    #    - Each minute of 'social' deducts -0.20 points.
-    #    - Each minute of 'entertainment' deducts -0.12 points.
-    #    - Capped at -35 points total.
-    leisure_penalty = min(35, (social_min * 0.20) + (entertainment_min * 0.12))
+    # 3. Category Adjustments (minor offsets for study/work vs social/entertainment)
+    prod_offset = min(15, (study_min * 0.05) + (work_min * 0.03))
+    leisure_offset = min(15, (social_min * 0.05) + (entertainment_min * 0.03))
 
-    # 5. Diversity Bonus:
-    #    - Having multiple active categories encourages balanced lifestyle.
-    active_cats = sum(1 for m in [study_min, entertainment_min, social_min, work_min, other_min] if m > 0.5)
-    diversity_bonus = min(10, active_cats * 2.5)
+    # 4. Eye Break Bonus
+    break_bonus = min(40, eye_breaks * 8)
 
     # Calculate final score
-    score = 70 - time_penalty + prod_bonus - leisure_penalty + diversity_bonus
+    score = base_score - time_penalty + prod_offset - leisure_offset + break_bonus
     
-    # Ensure score stays within [0, 100] range
     return int(round(max(0, min(100, score))))
 
 # ─── Auth Routes ───────────────────────────────────────────────────────────────
@@ -219,9 +224,9 @@ def signup():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm', '')
-        gender   = request.form.get('gender', '')
+        gender   = None
 
-        if not username or not email or not password or not gender:
+        if not username or not email or not password:
             error = 'All fields are required.'
         elif len(username) < 3:
             error = 'Username must be at least 3 characters.'
@@ -284,16 +289,160 @@ def login():
     return render_template('login.html', error=error)
 
 
+# ─── SMTP CONFIG & OTP SENDER ──────────────────────────────────────────────────
+SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+SMTP_EMAIL = 'i.aditya.biswas@gmail.com'
+SMTP_PASSWORD = 'mhkaifdbnttuuixd'
+
+def send_otp_email(receiver_email, otp):
+    try:
+        # Save to local workspace debug file for ease of local testing without SMTP
+        with open("last_otp.txt", "w", encoding="utf-8") as f:
+            f.write(otp)
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] 🔑 GENERATED PASSWORD RESET OTP FOR {receiver_email}: {otp}")
+    except Exception as e:
+        print(f"Error writing OTP to debug file: {e}")
+
+    if SMTP_EMAIL and SMTP_PASSWORD:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = SMTP_EMAIL
+            msg['To'] = receiver_email
+            msg['Subject'] = "Your WellBeingTracker Verification OTP"
+            
+            body = f"""Hello,
+
+You have requested a password reset for your WellBeingTracker account.
+Your 6-digit verification code (OTP) is:
+
+=========================
+🔑   {otp}
+=========================
+
+This code is valid for 10 minutes. If you did not request this, you can safely ignore this email.
+
+Warm regards,
+The WellBeingTracker Team"""
+            msg.attach(MIMEText(body, 'plain'))
+            
+            if SMTP_PORT == 465:
+                server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+            else:
+                server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+                server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
+            server.quit()
+            print(f"OTP successfully emailed to {receiver_email}")
+            return True
+        except Exception as e:
+            print(f"SMTP error sending OTP to {receiver_email}: {e}")
+            return False
+    else:
+        print("SMTP credentials are not configured. Running in local debug mode: OTP written to 'last_otp.txt'")
+        return True
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     message = None
+    error = None
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
-        if email:
-            # For this local prototype, we will just show a success message
-            message = "If an account exists with that email, a password reset link has been sent."
+        if not email:
+            error = "Please enter your email address."
+        else:
+            conn = get_db()
+            user_row = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
+            conn.close()
             
-    return render_template('forgot_password.html', message=message)
+            if not user_row:
+                error = "No account found with that email address."
+            else:
+                # Generate 6-digit random code
+                otp = "".join([str(random.randint(0, 9)) for _ in range(6)])
+                
+                # Store in session
+                session['reset_email'] = email
+                session['reset_otp'] = otp
+                session['reset_otp_expiry'] = (datetime.now() + timedelta(minutes=10)).isoformat()
+                session['otp_verified'] = False
+                
+                # Send OTP (email or write locally)
+                send_otp_email(email, otp)
+                
+                # Redirect to verification page
+                return redirect(url_for('verify_otp'))
+                
+    return render_template('forgot_password.html', message=message, error=error)
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    # Make sure they have a reset flow in progress
+    email = session.get('reset_email')
+    if not email:
+        return redirect(url_for('forgot_password'))
+        
+    error = None
+    debug_otp = None
+    
+    # Check if SMTP is NOT configured (running local prototyping) to ease testing
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        debug_otp = session.get('reset_otp')
+        
+    if request.method == 'POST':
+        submitted_otp = request.form.get('otp', '').strip()
+        
+        # Check expiry
+        expiry_str = session.get('reset_otp_expiry')
+        if not expiry_str or datetime.now() > datetime.fromisoformat(expiry_str):
+            error = "The verification code has expired. Please request a new one."
+        elif not submitted_otp:
+            error = "Please enter the verification code."
+        elif submitted_otp != session.get('reset_otp'):
+            error = "Invalid verification code. Please check and try again."
+        else:
+            session['otp_verified'] = True
+            return redirect(url_for('reset_password'))
+            
+    return render_template('verify_otp.html', email=email, error=error, debug_otp=debug_otp)
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    # Enforce reset authorization checks
+    if not session.get('otp_verified') or not session.get('reset_email'):
+        return redirect(url_for('forgot_password'))
+        
+    error = None
+    email = session.get('reset_email')
+    
+    if request.method == 'POST':
+        new_pwd = request.form.get('password', '')
+        confirm_pwd = request.form.get('confirm', '')
+        
+        if not new_pwd:
+            error = "Please enter a new password."
+        elif len(new_pwd) < 6:
+            error = "Password must be at least 6 characters long."
+        elif new_pwd != confirm_pwd:
+            error = "Passwords do not match. Please verify."
+        else:
+            hashed = generate_password_hash(new_pwd)
+            
+            conn = get_db()
+            conn.execute('UPDATE users SET password=? WHERE email=?', (hashed, email))
+            conn.commit()
+            conn.close()
+            
+            # Clean up session reset variables
+            session.pop('reset_email', None)
+            session.pop('reset_otp', None)
+            session.pop('reset_otp_expiry', None)
+            session.pop('otp_verified', None)
+            
+            return render_template('login.html', error=None, success="Password reset successfully! You can now log in.")
+            
+    return render_template('reset_password.html', email=email, error=error)
 
 
 @app.route('/logout')
@@ -335,7 +484,8 @@ def index():
                            bio=current_user.bio or '',
                            avatar_url=current_user.avatar_url or '',
                            gender=current_user.gender or '',
-                           switch_token=token)
+                           switch_token=token,
+                           sound_style=current_user.sound_style or 'short')
 
 
 @app.route('/api/account/switch', methods=['POST'])
@@ -375,6 +525,20 @@ def switch_account():
     return jsonify({'success': True})
 
 
+@app.route('/api/user/save_sound_style', methods=['POST'])
+@login_required
+def save_sound_style():
+    data = request.get_json() or {}
+    sound_style = data.get('sound_style', 'short').strip()
+    
+    conn = get_db()
+    conn.execute('UPDATE users SET sound_style=? WHERE id=?', (sound_style, current_user.id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+
 @app.route('/api/user/update', methods=['POST'])
 @login_required
 def update_user():
@@ -383,10 +547,10 @@ def update_user():
     new_email    = request.form.get('email', '').strip().lower()
     new_phone    = request.form.get('phone', '').strip()
     new_bio      = request.form.get('bio', '').strip()
-    new_gender   = request.form.get('gender', '').strip()
+    new_gender   = request.form.get('gender', '').strip() or current_user.gender
     
-    if not new_username or not new_email or not new_gender:
-        return jsonify({'error': 'Username, email, and gender are required'}), 400
+    if not new_username or not new_email:
+        return jsonify({'error': 'Username and email are required'}), 400
         
     avatar_url = current_user.avatar_url
     
@@ -507,7 +671,8 @@ def get_app_category(app_name):
     app_lower = app_name.lower()
     if any(x in app_lower for x in ['vs code', 'visual studio', 'python', 'github', 'sublime', 'pycharm', 'intellij', 'terminal', 'cmd', 'powershell', 'stud', 'learn', 'course', 'coding', 'antigravity']):
         return 'study'
-    elif any(x in app_lower for x in ['youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming']):
+    elif any(x in app_lower for x in ['youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming', 'microsoft store']):
+
         return 'entertainment'
     elif any(x in app_lower for x in ['chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger']):
         return 'social'
@@ -527,7 +692,7 @@ def tracker_ping():
         return jsonify({'error': 'Missing fields'}), 400
         
     conn = get_db()
-    user_row = conn.execute('SELECT id FROM users WHERE switch_token=?', (token,)).fetchone()
+    user_row = conn.execute('SELECT id, sound_style FROM users WHERE switch_token=?', (token,)).fetchone()
     conn.close()
     
     if not user_row:
@@ -579,7 +744,60 @@ def tracker_ping():
             'session_duration': 0.0
         }
         
-    return jsonify({'success': True})
+    limit_info = None
+    today = date.today().isoformat()
+    
+    conn = get_db()
+    limit_row = conn.execute(
+        'SELECT limit_minutes FROM time_limits WHERE user_id=? AND LOWER(app_name)=LOWER(?)',
+        (user_id, app_name)
+    ).fetchone()
+    
+    if limit_row:
+        limit_min = limit_row['limit_minutes']
+        used_row = conn.execute(
+            'SELECT COALESCE(SUM(minutes), 0.0) as used FROM sessions '
+            'WHERE user_id=? AND date=? AND LOWER(app_name)=LOWER(?)',
+            (user_id, today, app_name)
+        ).fetchone()
+        used_min = used_row['used'] if used_row else 0.0
+        
+        limit_info = {
+            'app_name': app_name,
+            'limit_minutes': limit_min,
+            'used_minutes': used_min,
+            'exceeded': used_min >= limit_min
+        }
+        
+    # Query all exceeded limits for the user today to notify via the background tracker
+    limits = conn.execute(
+        'SELECT app_name, limit_minutes FROM time_limits WHERE user_id=?',
+        (user_id,)
+    ).fetchall()
+    
+    exceeded_limits = []
+    for lim in limits:
+        row = conn.execute(
+            'SELECT COALESCE(SUM(minutes), 0.0) as used FROM sessions '
+            'WHERE user_id=? AND date=? AND LOWER(app_name)=LOWER(?)',
+            (user_id, today, lim['app_name'])
+        ).fetchone()
+        used = row['used'] if row else 0.0
+        if used >= lim['limit_minutes']:
+            exceeded_limits.append({
+                'app_name': lim['app_name'],
+                'limit_minutes': lim['limit_minutes'],
+                'used_minutes': used
+            })
+            
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'limit_info': limit_info,
+        'exceeded_limits': exceeded_limits,
+        'sound_style': user_row['sound_style'] if (user_row and 'sound_style' in user_row.keys()) else 'short'
+    })
 
 
 @app.route('/api/tracker/status', methods=['GET'])
@@ -651,6 +869,12 @@ def daily_report():
         'SELECT category, SUM(minutes) as total FROM sessions WHERE user_id=? AND date=? GROUP BY category',
         (current_user.id, target_date)
     ).fetchall()
+    
+    break_row = conn.execute(
+        "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at)=?",
+        (current_user.id, target_date)
+    ).fetchone()
+    eye_breaks = break_row['cnt'] if break_row else 0
     conn.close()
 
     cats         = {r['category']: r['total'] for r in rows}
@@ -660,7 +884,7 @@ def daily_report():
     work         = cats.get('work', 0)
     other        = cats.get('other', 0)
     total        = study + entertainment + social + work + other
-    score        = compute_balance_score(study, entertainment, social, work, other, total)
+    score        = compute_balance_score(study, entertainment, social, work, other, total, eye_breaks)
 
     return jsonify({
         'date': target_date,
@@ -692,6 +916,13 @@ def weekly_report():
             'SELECT category, SUM(minutes) as total FROM sessions WHERE user_id=? AND date=? GROUP BY category',
             (current_user.id, d)
         ).fetchall()
+        
+        break_row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at)=?",
+            (current_user.id, d)
+        ).fetchone()
+        eye_breaks = break_row['cnt'] if break_row else 0
+
         cats         = {r['category']: r['total'] for r in rows}
         study        = cats.get('study', 0)
         entertainment= cats.get('entertainment', 0)
@@ -709,7 +940,7 @@ def weekly_report():
             'total': total, 'study': study,
             'entertainment': entertainment, 'social': social,
             'work': work, 'other': other,
-            'balance_score': compute_balance_score(study, entertainment, social, work, other, total)
+            'balance_score': compute_balance_score(study, entertainment, social, work, other, total, eye_breaks)
         })
     conn.close()
     return jsonify(results)

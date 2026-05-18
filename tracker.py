@@ -5,6 +5,13 @@ import json
 import urllib.request
 import urllib.error
 import sys
+import threading
+import winsound
+
+# Ensure console supports printing Unicode / emojis on Windows without crashing
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 
 # ── Title & Visual Frame ──────────────────────────────────────────────────────
 print("""
@@ -19,6 +26,8 @@ APP_MAP = {
     'chrome.exe': 'Chrome',
     'msedge.exe': 'Edge',
     'firefox.exe': 'Firefox',
+    'applicationframehost.exe': 'Microsoft Store',
+
     'brave.exe': 'Brave Browser',
     'opera.exe': 'Opera',
     'code.exe': 'VS Code',
@@ -133,9 +142,107 @@ def send_ping(server_url, app_name, window_title, switch_token):
     
     try:
         with urllib.request.urlopen(req, timeout=5) as response:
-            return response.status == 200
-    except Exception as e:
-        return False
+            if response.status == 200:
+                res_body = response.read().decode('utf-8')
+                return json.loads(res_body)
+    except Exception:
+        pass
+    return None
+
+def send_windows_toast(title, body):
+    ps_script = f"""
+$xml = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType, Windows.UI.Notifications, ContentType = WindowsRuntime]::ToastText02)
+$textNodes = $xml.GetElementsByTagName("text")
+$null = $textNodes.Item(0).AppendChild($xml.CreateTextNode("{title}"))
+$null = $textNodes.Item(1).AppendChild($xml.CreateTextNode("{body}"))
+
+$audioNode = $xml.CreateElement("audio")
+$audioNode.SetAttribute("src", "ms-winsoundevent:Notification.Reminder")
+$audioNode.SetAttribute("silent", "false")
+$toastNode = $xml.SelectSingleNode("/toast")
+$null = $toastNode.AppendChild($audioNode)
+
+$toast = [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime]::new($xml)
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]::CreateToastNotifier("WellBeingTracker").Show($toast)
+"""
+    try:
+        import subprocess
+        subprocess.run(["powershell", "-NoProfile", "-Command", "-"], input=ps_script, encoding='utf-8', capture_output=True)
+    except Exception:
+        pass
+
+def show_warning_box(app_name, used_min, limit_min, sound_style='short'):
+    # Format minutes helper
+    def fmt_min(m):
+        h = int(m // 60)
+        mins = int(round(m % 60))
+        if h > 0:
+            return f"{h}h {mins}m"
+        return f"{mins}m"
+
+    print(f"\n[!] LIMIT EXCEEDED WARNING: {app_name} | Used: {fmt_min(used_min)} | Limit: {fmt_min(limit_min)}")
+
+    title = f"⏰ Limit Exceeded: {app_name}"
+    body = f"You've used {fmt_min(used_min)} of {fmt_min(limit_min)} today. Take a break! 🌿🧘‍♂️"
+    
+    # 1. Trigger modern native Windows Notification Toast on laptop
+    send_windows_toast(title, body)
+
+    # 2. Trigger standard async system MessageBox dialog as a backup
+    def target():
+        # Play user's preferred notification sound style natively using winsound
+        try:
+            if sound_style == 'short':
+                # ⚡ Standard Chirp
+                winsound.Beep(523, 100)
+                winsound.Beep(1046, 150)
+            elif sound_style == 'long':
+                # 🎵 Calming Zen Chimes (Warm Em7 chord arpeggio)
+                for freq in [330, 392, 494, 659, 988]:
+                    winsound.Beep(freq, 150)
+            elif sound_style == 'alarm':
+                # 🔔 Repeating Chime Alarm (3 double-beeps at 880Hz)
+                for _ in range(3):
+                    winsound.Beep(880, 100)
+                    time.sleep(0.05)
+                    winsound.Beep(880, 100)
+                    time.sleep(0.5)
+            elif sound_style == 'drip':
+                # 💧 Water Droplet
+                winsound.Beep(1200, 80)
+                winsound.Beep(400, 100)
+            elif sound_style == 'ding':
+                # 🛎️ Classic Ding
+                winsound.Beep(2000, 300)
+            elif sound_style == 'synth':
+                # 🎛️ Synth Echo
+                for freq in [600, 500, 400, 300]:
+                    winsound.Beep(freq, 120)
+                    time.sleep(0.08)
+            else:
+                # Fallback: simple double chirp
+                winsound.Beep(800, 100)
+                winsound.Beep(1000, 150)
+        except Exception as e:
+            # Fallback to default alert sound if beep fails
+            try:
+                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
+            except Exception:
+                pass
+            
+        msg = (
+            f"You've reached your daily limit for {app_name}!\n\n"
+            f"You've used {fmt_min(used_min)} of your {fmt_min(limit_min)} limit today.\n\n"
+            "It's time to step away, rest your eyes, and get some offline relaxation! 🌿🧘‍♂️"
+        )
+        # 0x30 = MB_ICONWARNING, 0x40000 = MB_TOPMOST
+        ctypes.windll.user32.MessageBoxW(
+            0,
+            msg,
+            f"Limit Exceeded: {app_name} ⏰",
+            0x30 | 0x40000
+        )
+    threading.Thread(target=target, daemon=True).start()
 
 def main():
     print("[*] Starting tracker loop (polling active window every 3 seconds)...")
@@ -143,8 +250,16 @@ def main():
     
     last_app = None
     last_user = None
+    notified_apps = set()
+    last_notified_date = None
     
     while True:
+        # Date change resetting
+        current_date = time.strftime('%Y-%m-%d')
+        if last_notified_date != current_date:
+            notified_apps.clear()
+            last_notified_date = current_date
+            
         config = load_config()
         if not config:
             print("[-] No config file found. Please log in or refresh the dashboard.", end="\r")
@@ -173,15 +288,40 @@ def main():
             print(f"\n[+] Switched active session to: {username}")
             last_user = username
             last_app = None
+            notified_apps.clear()  # Reset notified cache when swapping users!
             
         # Logging transitions in stdout
         if app_name != last_app:
             print(f"[+] Active Window: {app_name}  |  {window_title[:60]}")
             last_app = app_name
             
-        success = send_ping(server_url, app_name, window_title, switch_token)
-        if not success:
+        res_data = send_ping(server_url, app_name, window_title, switch_token)
+        if res_data is None:
             print("[-] Failed to connect to server. Ensure Flask app is running at " + server_url, end="\r")
+        else:
+            sound_style = res_data.get('sound_style', 'short')
+            # 1. Process all exceeded limits returned by the server
+            exceeded_list = res_data.get('exceeded_limits', [])
+            for item in exceeded_list:
+                lim_app = item['app_name']
+                lim_min = item['limit_minutes']
+                usd_min = item['used_minutes']
+                app_key = (lim_app.lower(), lim_min)
+                
+                if app_key not in notified_apps:
+                    notified_apps.add(app_key)
+                    show_warning_box(lim_app, usd_min, lim_min, sound_style)
+            
+            # 2. Legacy fallback for single active app limit info
+            limit_info = res_data.get('limit_info')
+            if limit_info and limit_info.get('exceeded'):
+                limit_min = limit_info['limit_minutes']
+                used_min = limit_info['used_minutes']
+                app_key = (app_name.lower(), limit_min)
+                
+                if app_key not in notified_apps:
+                    notified_apps.add(app_key)
+                    show_warning_box(app_name, used_min, limit_min, sound_style)
             
         time.sleep(3)
 

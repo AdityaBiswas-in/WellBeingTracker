@@ -41,7 +41,7 @@ const CAT_COLORS = {
   },
   get social() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#0277bd' : '#40c4ff';
+    return isLight ? '#43a047' : '#40c4ff';
   },
   get work() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
@@ -179,7 +179,32 @@ setInterval(updateClock, 30000);
 // ══════════════════════════════════════════════════════════════
 // TAB NAVIGATION
 // ══════════════════════════════════════════════════════════════
+// Keep track of visited tabs to show intro messages only the first time per session
+const visitedTabs = new Set();
+
+// Reset warning flag when leaving dashboard
+let mostUsedAppWarned = false;
+
 function switchTab(tab) {
+  if (tab !== 'dashboard') {
+    mostUsedAppWarned = false;
+  }
+
+  // Show instructor with page info only on the first visit in this session
+  const pageMessages = {
+    'dashboard': "Welcome to the Dashboard! 📊 Here you can see your daily balance score and quick stats. 📈✨",
+    'weekly': "This is the Weekly Overview! 📅 Analyze your screen time trends over the last 7 days here. 🔍💚",
+    'habits': "Welcome to Habits! ⚡ Track your screen time categories and follow daily wellness tips. 💡🌱",
+    'limits': "Here are your App Limits! ⏱️ Set daily caps for apps and websites to maintain balance. 🛡️🛡️"
+  };
+  
+  const message = pageMessages[tab];
+  if (message && !visitedTabs.has(tab)) {
+    showInstructor(message, 5000);
+    visitedTabs.add(tab);
+  }
+
+  // Original tab switching logic
   document.querySelectorAll('.nav-tab').forEach(b => {
     b.classList.toggle('active', b.id === `tab-${tab}`);
     b.setAttribute('aria-selected', b.id === `tab-${tab}` ? 'true' : 'false');
@@ -189,8 +214,30 @@ function switchTab(tab) {
   });
   if (tab === 'weekly') loadWeekly();
   if (tab === 'habits') initHabits();
-  if (tab === 'limits') initLimits();
+  if (tab === 'limits') {
+    initLimits();
+    
+    // Scan limits immediately and give verbal report of exceeded apps
+    fetch('/api/limits/check')
+      .then(res => res.json())
+      .then(limitsStatus => {
+        const exceededApps = limitsStatus.filter(s => s.exceeded).map(s => s.app_name);
+        if (exceededApps.length > 0) {
+          const listStr = exceededApps.join(', ');
+          const msg = `⚠️ Alert: You have exceeded your daily time limits for: ${listStr}. Please step away from your screen and take a refreshing break! 🧘‍♂️⏱️`;
+          // Delay if welcoming them for the first time
+          setTimeout(() => {
+            showInstructor(msg, 7500);
+          }, visitedTabs.has('limits') ? 0 : 4000);
+        }
+      })
+      .catch(err => console.error("Error in tab-switch limits check:", err));
+  }
 }
+
+
+
+
 
 // ══════════════════════════════════════════════════════════════
 // HELPERS
@@ -208,6 +255,9 @@ function scoreColor(score) {
   if (score >= 40) return '#ffd740';
   return '#ff6e40';
 }
+
+
+
 
 function scoreBadgeText(score) {
   if (score >= 80) return '🌟 Excellent';
@@ -838,6 +888,11 @@ function closeEyeModal() {
   logEyeBreak();
 }
 
+function closeLimitModal() {
+  const modal = document.getElementById('limitExceededModal');
+  if (modal) modal.classList.remove('open');
+}
+
 async function logEyeBreak() {
   await fetch('/api/eye_care', { method: 'POST' });
 
@@ -1441,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-refresh limits and check notifications every 10 seconds
   setInterval(() => {
     loadAndRenderLimits();
-    checkAndNotify();
+    checkActiveLimits();
   }, 10000);
 
 
@@ -1458,7 +1513,25 @@ document.addEventListener('DOMContentLoaded', () => {
 // ════════════════════════════════════════════════════════════
 
 // Track which apps we've already notified today so we don't spam
-const notifiedToday = new Set();
+function getNotifiedTodaySet() {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const savedDate = localStorage.getItem('notified_apps_date');
+  if (savedDate !== todayStr) {
+    localStorage.setItem('notified_apps_date', todayStr);
+    localStorage.setItem('notified_apps_today', '[]');
+    return new Set();
+  }
+  return new Set(JSON.parse(localStorage.getItem('notified_apps_today') || '[]'));
+}
+
+const notifiedToday = getNotifiedTodaySet();
+
+function markAppAsNotified(appName) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  localStorage.setItem('notified_apps_date', todayStr);
+  notifiedToday.add(appName.toLowerCase());
+  localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
+}
 
 // ── Request notification permission ────────────────────────────
 function requestNotifPermission() {
@@ -1609,11 +1682,16 @@ function changeSoundStyle(style) {
   notificationSoundStyle = style;
   localStorage.setItem('sound_style', style);
   
-  // Keep both selectors in sync
+  // Sync selector in UI
   const s1 = document.getElementById('soundSelector');
-  const s2 = document.getElementById('soundSelectorLimits');
   if (s1) s1.value = style;
-  if (s2) s2.value = style;
+  
+  // Sync style with backend database
+  fetch('/api/user/save_sound_style', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sound_style: style })
+  }).catch(err => console.error("Failed to sync sound style with server:", err));
   
   playNotificationSound(); // instantly preview the newly selected sound!
 }
@@ -1621,21 +1699,48 @@ function changeSoundStyle(style) {
 
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (notifiedToday.has(appName.toLowerCase())) return;  // already notified
-  notifiedToday.add(appName.toLowerCase());
+  markAppAsNotified(appName);
 
   playNotificationSound();
   
   // Also show the pop-in instructor
   showInstructor(`You've reached your limit for ${appName}! Time to take a break. 🌿`, 8000);
 
-  new Notification(`⏰ Time limit reached: ${appName}`, {
-    body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
-    icon: '/static/icon.png',
-    badge: '/static/icon.png',
-    tag:  `limit-${appName}`,
-  });
+  // Show the custom in-website modal popup
+  const modal = document.getElementById('limitExceededModal');
+  const msgEl = document.getElementById('limitExceededMessage');
+  if (modal && msgEl) {
+    msgEl.innerHTML = `You've reached your daily limit for <strong>${appName}</strong>!<br/>You’ve used <strong>${fmtMin(usedMin)}</strong> of your <strong>${fmtMin(limitMin)}</strong> limit today. It's time to step away, rest your eyes, and get some offline relaxation! 🧘‍♂️✨`;
+    modal.classList.add('open');
+  }
+
+  // If push notifications are supported, enabled in settings, and granted, trigger native notification
+  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
+  if (appNotifEnabled && 'Notification' in window && Notification.permission === 'granted') {
+    new Notification(`⏰ Time limit reached: ${appName}`, {
+      body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
+      icon: '/static/icon.png',
+      badge: '/static/icon.png',
+      tag:  `limit-${appName}`,
+    });
+  }
+}
+
+// ── Check active limits periodically ────────────────────────────
+async function checkActiveLimits() {
+  try {
+    const res = await fetch('/api/limits/check');
+    if (!res.ok) return;
+    const limitsStatus = await res.json();
+    limitsStatus.forEach(status => {
+      if (status.exceeded) {
+        sendNotification(status.app_name, status.used_minutes, status.limit_minutes);
+      }
+    });
+  } catch (e) {
+    console.error("Error checking active limits:", e);
+  }
 }
 
 // ── Load & render limits tab ────────────────────────────────────
@@ -1645,7 +1750,105 @@ async function initLimits() {
   if (banner && 'Notification' in window && Notification.permission === 'default') {
     banner.style.display = 'flex';
   }
+
+  // Update visual status indicators in the Limits section
+  const statusText = document.getElementById('notifStatusText');
+  const toggleInput = document.getElementById('appNotificationsToggle');
+  const guideEl = document.getElementById('notifSetupGuide');
+  
+  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
+
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') {
+      if (toggleInput) toggleInput.checked = appNotifEnabled;
+      if (statusText) {
+        if (appNotifEnabled) {
+          statusText.textContent = '✓ Notifications enabled';
+          statusText.style.color = 'var(--green-vivid)';
+        } else {
+          statusText.textContent = '🔕 Notifications paused';
+          statusText.style.color = 'var(--text-muted)';
+        }
+      }
+      if (guideEl) guideEl.style.display = 'none';
+    } else if (Notification.permission === 'denied') {
+      if (toggleInput) toggleInput.checked = false;
+      if (statusText) {
+        statusText.textContent = '❌ Notifications blocked';
+        statusText.style.color = '#ff5252';
+      }
+      if (guideEl) guideEl.style.display = 'block';
+    } else {
+      if (toggleInput) toggleInput.checked = false;
+      if (statusText) {
+        statusText.textContent = '🔔 Notifications not set';
+        statusText.style.color = 'var(--text-muted)';
+      }
+      if (guideEl) guideEl.style.display = 'none';
+    }
+  } else {
+    if (toggleInput) toggleInput.checked = false;
+    if (statusText) {
+      statusText.textContent = '⚠️ Not supported by browser';
+      statusText.style.color = '#ff5252';
+    }
+  }
+
   await loadAndRenderLimits();
+}
+
+// ── Toggle Notifications Option ──────────────────────────────────
+function toggleNotifications(enabled) {
+  const toggleInput = document.getElementById('appNotificationsToggle');
+  const statusText = document.getElementById('notifStatusText');
+  const guideEl = document.getElementById('notifSetupGuide');
+
+  if (!('Notification' in window)) {
+    showToast('⚠️ Your browser does not support desktop notifications.');
+    if (toggleInput) toggleInput.checked = false;
+    return;
+  }
+
+  if (enabled) {
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') {
+        localStorage.setItem('app_notifications_enabled', 'true');
+        if (statusText) {
+          statusText.textContent = '✓ Notifications enabled';
+          statusText.style.color = 'var(--green-vivid)';
+        }
+        if (guideEl) guideEl.style.display = 'none';
+        showToast('🔔 Desktop notifications enabled! You\'ll get native popups.');
+        
+        // Trigger a native test notification instantly to prove it really works!
+        new Notification('WellBeingTracker ✅', {
+          body: 'Limit alert notifications are now fully enabled!',
+          icon: '/static/icon.png',
+          badge: '/static/icon.png',
+        });
+      } else if (perm === 'denied') {
+        localStorage.setItem('app_notifications_enabled', 'false');
+        if (statusText) {
+          statusText.textContent = '❌ Notifications blocked';
+          statusText.style.color = '#ff5252';
+        }
+        if (guideEl) guideEl.style.display = 'block';
+        if (toggleInput) toggleInput.checked = false;
+        showToast('⚠️ Notifications blocked in browser settings.');
+      } else {
+        localStorage.setItem('app_notifications_enabled', 'false');
+        if (toggleInput) toggleInput.checked = false;
+      }
+    });
+  } else {
+    localStorage.setItem('app_notifications_enabled', 'false');
+    if (statusText) {
+      statusText.textContent = '🔕 Notifications paused';
+      statusText.style.color = 'var(--text-muted)';
+    }
+    if (guideEl) guideEl.style.display = 'none';
+    showToast('🔕 In-app limit notifications are now paused.');
+  }
 }
 
 function selectPopularApp(appName, hours, mins) {
@@ -1658,7 +1861,8 @@ function selectPopularApp(appName, hours, mins) {
   }
 }
 
-const fetchLimits = loadAndRenderLimits; // Alias for the refresh button
+// Global track for active inline limit editing
+let editingAppName = null;
 
 async function loadAndRenderLimits() {
   const [limitsRes, checkRes] = await Promise.all([
@@ -1675,6 +1879,10 @@ async function loadAndRenderLimits() {
 }
 
 function renderLimits(limits, statusMap) {
+  if (editingAppName !== null) {
+    // Skip re-rendering the limits list DOM while editing to prevent input disruption/refreshing
+    return;
+  }
   const list = document.getElementById('limitsList');
   
   // Update summary cards
@@ -1730,9 +1938,12 @@ function renderLimits(limits, statusMap) {
               <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
             </div>
           </div>
-          <div class="limit-item-right">
+          <div class="limit-item-right" id="lim-right-${escHtml(lim.app_name)}">
             <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
-            <button class="limit-del-btn" onclick="deleteLimit('${escHtml(lim.app_name)}')" title="Remove limit">✕</button>
+            <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+            </button>
+            <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
           </div>
         </div>
         <div class="limit-bar-row">
@@ -1803,7 +2014,11 @@ async function handleSetLimit(e) {
     document.getElementById('limitsForm').reset();
     document.getElementById('limitHours').value = '1';
     document.getElementById('limitMins').value  = '0';
+    // Reset notification state for this app to allow a new alert if the limit changed
+    notifiedToday.delete(appName.toLowerCase());
+    localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
     await loadAndRenderLimits();
+    checkActiveLimits();
   } else {
     const d = await res.json();
     errEl.textContent = d.error || 'Failed to save. Try again.';
@@ -1815,7 +2030,111 @@ async function deleteLimit(appName) {
   await fetch(`/api/limits/${encodeURIComponent(appName)}`, { method: 'DELETE' });
   showToast(`✅ Limit removed for ${appName}`);
   notifiedToday.delete(appName.toLowerCase());
+  localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
   await loadAndRenderLimits();
+}
+
+// ── Inline Edit Limits ──────────────────────────────────────────
+function startEditLimit(appName, currentLimitMin) {
+  editingAppName = appName;
+  const rightWrap = document.getElementById(`lim-right-${appName}`);
+  if (!rightWrap) return;
+
+  const currentHrs = Math.floor(currentLimitMin / 60);
+  const currentMins = Math.round(currentLimitMin % 60);
+  
+  const escapedAppName = appName.replace(/'/g, "\\'");
+
+  rightWrap.innerHTML = `
+    <div class="limit-edit-inline" style="display: flex; align-items: center; gap: 0.3rem;">
+      
+      <!-- Hours Spin Input -->
+      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
+        <input type="number" class="time-input hrs-input" value="${currentHrs}" min="0" max="23" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="h">
+        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
+          <button type="button" onclick="incrementSiblingInput(this, 23)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
+          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
+        </div>
+      </div>
+      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.15rem;">h</span>
+
+      <!-- Minutes Spin Input -->
+      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
+        <input type="number" class="time-input mins-input" value="${currentMins}" min="0" max="59" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="m">
+        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
+          <button type="button" onclick="incrementSiblingInput(this, 59)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
+          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
+        </div>
+      </div>
+      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.25rem;">m</span>
+
+      <!-- Actions -->
+      <button class="limit-edit-save-btn" onclick="saveEditLimit('${escapedAppName}', this)" title="Save limit">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check" style="display: block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </button>
+      <button class="limit-edit-cancel-btn" onclick="cancelEditLimit()" title="Cancel editing">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+  `;
+}
+
+function cancelEditLimit() {
+  editingAppName = null;
+  loadAndRenderLimits();
+}
+
+async function saveEditLimit(appName, buttonEl) {
+  const container = buttonEl ? buttonEl.closest('.limit-edit-inline') : null;
+  let hrsEl, minsEl;
+  
+  if (container) {
+    hrsEl = container.querySelector('.hrs-input');
+    minsEl = container.querySelector('.mins-input');
+  } else {
+    // Fallback to ID-based lookup if invoked programmatically without a button trigger
+    const safeId = appName.replace(/[^a-zA-Z0-9]/g, '_');
+    hrsEl = document.getElementById(`edit-hrs-${safeId}`);
+    minsEl = document.getElementById(`edit-mins-${safeId}`);
+  }
+  
+  if (!hrsEl || !minsEl) return;
+
+  const hrs = parseInt(hrsEl.value, 10) || 0;
+  const mins = parseInt(minsEl.value, 10) || 0;
+  const totalMin = (hrs * 60) + mins;
+
+  if (totalMin <= 0) {
+    showToast("⚠️ Limit must be at least 1 minute!");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/limits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_name: appName,
+        limit_minutes: totalMin
+      })
+    });
+
+    if (res.ok) {
+      showToast(`✏️ Updated limit for ${appName} to ${fmtMin(totalMin)}!`);
+      // Reset notified cache for this app since the limit was updated
+      notifiedToday.delete(appName.toLowerCase());
+      localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
+      editingAppName = null;
+      await loadAndRenderLimits();
+      checkActiveLimits();
+    } else {
+      const d = await res.json();
+      showToast(`⚠️ ${d.error || 'Failed to update'}`);
+    }
+  } catch (e) {
+    console.error("Error updating limit:", e);
+    showToast("⚠️ Connection error updating limit.");
+  }
 }
 
 // ── Set limit for a specific app from tracker ───────────────────
@@ -1864,6 +2183,25 @@ let messageIndex = 0;
 
 let instructorTimeout = null;
 
+// Text typewriter animation helper that handles emojis correctly
+function animateTextMessage(element, text, speed = 40) {
+  if (!element) return;
+  if (element.typewriterInterval) clearInterval(element.typewriterInterval);
+  
+  const chars = Array.from(text);
+  element.textContent = '';
+  let i = 0;
+  
+  element.typewriterInterval = setInterval(() => {
+    if (i < chars.length) {
+      element.textContent = chars.slice(0, i + 1).join('');
+      i++;
+    } else {
+      clearInterval(element.typewriterInterval);
+    }
+  }, speed);
+}
+
 function showInstructor(message, duration = 6000) {
   const container = document.getElementById('instructor-container');
   const msgEl = document.getElementById('instructor-message');
@@ -1871,11 +2209,12 @@ function showInstructor(message, duration = 6000) {
   
   if (!container || !msgEl || !bubble) return;
   
+  let text = '';
   // If a specific message is provided, use it. Otherwise, cycle through the info messages.
   if (message) {
-    msgEl.textContent = message;
+    text = message;
   } else {
-    msgEl.textContent = INSTRUCTOR_MESSAGES[messageIndex];
+    text = INSTRUCTOR_MESSAGES[messageIndex];
     messageIndex = (messageIndex + 1) % INSTRUCTOR_MESSAGES.length;
   }
   
@@ -1883,8 +2222,18 @@ function showInstructor(message, duration = 6000) {
   container.classList.remove('instructor-hidden');
   container.classList.add('instructor-visible');
   
+  // Only auto-add mobile-show if it's already active/toggled on by the user or if we are not on mobile
+  const btn = document.getElementById('instructorToggleBtn');
+  const isMobile = window.innerWidth <= 600;
+  if (!isMobile || (btn && btn.classList.contains('active'))) {
+    container.classList.add('mobile-show');
+  }
+  
   // Show the bubble
   bubble.classList.add('bubble-visible');
+  
+  // Typewriter animation
+  animateTextMessage(msgEl, text, 40);
   
   // Reset the timeout so clicking it again keeps it open
   if (instructorTimeout) clearTimeout(instructorTimeout);
@@ -1920,11 +2269,10 @@ async function updateAccount() {
   const email    = document.getElementById('editEmail').value.trim();
   const phone    = document.getElementById('editPhone').value.trim();
   const bio      = document.getElementById('editBio').value.trim();
-  const gender   = document.getElementById('editGender').value;
   const avatar   = document.getElementById('editAvatar').files[0];
   
-  if (!username || !email || !gender) {
-    alert('Please fill in all mandatory fields, including gender.');
+  if (!username || !email) {
+    alert('Please fill in all mandatory fields.');
     return;
   }
   
@@ -1933,7 +2281,6 @@ async function updateAccount() {
   formData.append('email', email);
   formData.append('phone', phone);
   formData.append('bio', bio);
-  formData.append('gender', gender);
   if (avatar) {
     formData.append('avatar', avatar);
   }
@@ -2106,32 +2453,47 @@ document.addEventListener('click', (e) => {
 
 // Welcome the user and set up click listeners
 document.addEventListener('DOMContentLoaded', () => {
+  // Read initial sound style from body data attribute loaded from database
+  const bodySound = document.body.getAttribute('data-sound-style');
+  if (bodySound) {
+    notificationSoundStyle = bodySound;
+    localStorage.setItem('sound_style', bodySound);
+  } else {
+    notificationSoundStyle = localStorage.getItem('sound_style') || 'long';
+  }
+
   // Restore persistent eye timer state if active!
   restoreEyeTimer();
 
   // Initialize notification sound selection value
   const s1 = document.getElementById('soundSelector');
-  const s2 = document.getElementById('soundSelectorLimits');
   if (s1) s1.value = notificationSoundStyle;
-  if (s2) s2.value = notificationSoundStyle;
 
 
   setTimeout(() => {
-    showInstructor();
+    // Only show the welcome message if the dashboard tab is currently active
+    const dashboardActive = document.getElementById('section-dashboard')?.classList.contains('active');
+    if (!dashboardActive) return;
+
+    showInstructor("Welcome! 👋 I'm here to help you maintain your WellBeingTracker! ✨", 4000);
+    
+    setTimeout(() => {
+      // Re-verify the dashboard tab is still active before giving the dashboard explanation
+      const stillActive = document.getElementById('section-dashboard')?.classList.contains('active');
+      if (stillActive) {
+        showInstructor("This is your Dashboard. Here you can see your daily balance score and quick stats.", 5000);
+      }
+    }, 5000);
   }, 1000);
 
+
   const container = document.getElementById('instructor-container');
-  if (container) {
-    container.style.cursor = 'pointer';
-    container.addEventListener('click', (e) => {
-      // Prevent the global click listener from immediately catching this
-      e.stopPropagation();
-      showInstructor();
-    });
-  }
 
   // Hide the bubble if the user clicks anywhere else
   document.addEventListener('click', (e) => {
+    // Ignore clicks on navigation tabs so the instructor can speak!
+    if (e.target.closest('.nav-tab')) return;
+    
     if (container && !container.contains(e.target)) {
       const bubble = document.getElementById('instructor-bubble');
       if (bubble && bubble.classList.contains('bubble-visible')) {
@@ -2141,8 +2503,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+
   // Initialize background auto-tracker polling
   initTracker();
+
+  // Scroll Observer to offer feedback when scrolling to Most Used Apps
+  const autoCard = document.querySelector('.auto-detected-card');
+  if (autoCard) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const dashboardActive = document.getElementById('section-dashboard')?.classList.contains('active');
+        if (entry.isIntersecting && dashboardActive && !mostUsedAppWarned) {
+          const firstRow = document.querySelector('#autoDetectedList .auto-detected-row');
+          if (firstRow) {
+            const appName = firstRow.querySelector('.auto-app-name')?.innerText || '';
+            const rawDur = firstRow.querySelector('.auto-duration')?.innerText || '';
+            const duration = rawDur.split('(')[0].trim();
+            if (appName && duration) {
+              mostUsedAppWarned = true;
+              const msg = `I noticed you've spent the most time on ${appName} today (${duration}). 📊 Try taking a short screen break to rest your eyes! 🚶‍♂️👀`;
+              showInstructor(msg, 6500);
+            }
+          }
+        }
+      });
+    }, { threshold: 0.15 });
+    observer.observe(autoCard);
+  }
 });
 
 
@@ -2170,6 +2557,10 @@ function initTracker() {
   // Initial poll and start 3s interval
   pollTrackerStatus();
   setInterval(pollTrackerStatus, 3000);
+
+  // Check active limits on load and every 6 seconds
+  checkActiveLimits();
+  setInterval(checkActiveLimits, 6000);
 
   // Smooth real-time timer count up in browser (1s tick)
   if (trackerTimerInterval) clearInterval(trackerTimerInterval);
@@ -2380,6 +2771,12 @@ async function pollTrackerStatus() {
       const dateStr = dashDateInput ? dashDateInput.value : null;
       loadDashboard(dateStr, true);
     }
+
+    // Auto-refresh Limits components if on the Limits tab and auto-tracking is active
+    const limitsSection = document.getElementById('section-limits');
+    if (limitsSection && limitsSection.classList.contains('active') && data.tracker_running) {
+      loadAndRenderLimits();
+    }
     
   } catch (err) {
     // API is Offline
@@ -2398,6 +2795,53 @@ async function pollTrackerStatus() {
     }
     if (infoCard) {
       infoCard.style.display = 'none';
+    }
+  }
+}
+
+// ── Time Input Spinner Helpers ─────────────────────────────────
+function incrementInput(id, max) {
+  const input = document.getElementById(id);
+  if (input) {
+    let val = parseInt(input.value, 10) || 0;
+    if (val < max) {
+      input.value = val + 1;
+      input.dispatchEvent(new Event('change'));
+    }
+  }
+}
+
+function decrementInput(id, min) {
+  const input = document.getElementById(id);
+  if (input) {
+    let val = parseInt(input.value, 10) || 0;
+    if (val > min) {
+      input.value = val - 1;
+      input.dispatchEvent(new Event('change'));
+    }
+  }
+}
+
+function incrementSiblingInput(btn, max) {
+  const container = btn.closest('div').parentElement;
+  const input = container.querySelector('input');
+  if (input) {
+    let val = parseInt(input.value, 10) || 0;
+    if (val < max) {
+      input.value = val + 1;
+      input.dispatchEvent(new Event('change'));
+    }
+  }
+}
+
+function decrementSiblingInput(btn, min) {
+  const container = btn.closest('div').parentElement;
+  const input = container.querySelector('input');
+  if (input) {
+    let val = parseInt(input.value, 10) || 0;
+    if (val > min) {
+      input.value = val - 1;
+      input.dispatchEvent(new Event('change'));
     }
   }
 }

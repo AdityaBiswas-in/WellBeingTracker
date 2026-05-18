@@ -16,7 +16,7 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
-<body>
+<body data-sound-style="{{ sound_style }}">
 
   <!-- ░░░ PARTICLE BACKGROUND ░░░ -->
   <canvas id="particleCanvas"></canvas>
@@ -24,7 +24,7 @@
   <!-- ░░░ NAV ░░░ -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="nav-logo">
-      <a href="/" style="text-decoration: none; color: inherit; cursor: pointer;" title="Go to Dashboard">
+      <a href="javascript:void(0)" onclick="switchTab('dashboard')" style="text-decoration: none; color: inherit; cursor: pointer;" title="Go to Dashboard">
         <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
       </a>
     </div>
@@ -246,7 +246,8 @@
       <div class="glass-card auto-detected-card" style="margin-top: 1.5rem; padding: 1.75rem;">
         <div class="auto-detected-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
           <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-            <span style="color: var(--green-vivid);"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg></span> Auto-Detected Apps
+            <span style="color: var(--green-vivid);"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg></span> Most Used Apps
+
           </h2>
           <span class="auto-detected-badge" style="font-size: 0.75rem; color: var(--text-secondary); background: var(--green-glow-sm); border: 1px solid var(--border-glass); padding: 0.25rem 0.6rem; border-radius: 50px; font-weight: 600;">Live Feed</span>
         </div>
@@ -411,7 +412,8 @@
       </div>
 
       <!-- Summary Cards -->
-      <div class="limits-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+      <div class="limits-summary-cards">
+
         <div class="glass-card summary-card" style="text-align: center; padding: 1.5rem;">
           <div class="summary-value" id="activeLimitsCount" style="font-size: 2rem; font-weight: 700; color: var(--green-vivid);">0</div>
           <div class="summary-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 0.5rem;">ACTIVE LIMITS</div>
@@ -426,7 +428,8 @@
         </div>
       </div>
 
-      <div class="limits-content-grid" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+      <div class="limits-content-grid">
+
         <!-- Left Column: Create a Limit -->
         <div class="glass-card limit-create-card" style="padding: 1.5rem;">
           <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 0.25rem;">Create a limit</h3>
@@ -438,20 +441,32 @@
             <div class="form-group">
               <label class="form-label" for="limitApp" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">APP</label>
 
-              <input class="form-input" type="text" id="limitApp" placeholder="YouTube" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 0.9rem;" />
+              <input class="form-input" type="text" id="limitApp" placeholder="YouTube" required style="width: 100%; background: var(--bg-base); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 0.9rem;" />
+
             </div>
             
             <div class="form-group">
               <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">DAILY TIME LIMIT</label>
               <div class="time-inputs-row" style="display: flex; align-items: center; gap: 0.5rem;">
-                <div class="time-input-group" style="flex: 1;">
-                  <input class="time-input-big" type="number" id="limitHours" min="0" max="23" value="1" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
-                  <label class="input-label" for="limitHours" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.25rem;">HOURS</label>
+                
+                <div class="time-input-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                  <div class="spin-col" style="display: flex; flex-direction: column; width: 100%;">
+                    <button type="button" class="spin-btn spin-up" onclick="incrementInput('limitHours', 23)" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-bottom: none; border-top-left-radius: 8px; border-top-right-radius: 8px; color: var(--text-muted); padding: 0.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'; this.style.color='var(--green-vivid)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.color='var(--text-muted)'">▲</button>
+                    <input class="time-input-big" type="number" id="limitHours" min="0" max="23" value="1" style="width: 100%; background: var(--bg-base); border: 1px solid var(--border-glass); border-radius: 0; padding: 0.5rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
+                    <button type="button" class="spin-btn spin-down" onclick="decrementInput('limitHours', 0)" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; color: var(--text-muted); padding: 0.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'; this.style.color='var(--green-vivid)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.color='var(--text-muted)'">▼</button>
+                  </div>
+                  <label class="input-label" for="limitHours" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.4rem; letter-spacing: 0.05em;">HOURS</label>
                 </div>
-                <span class="time-separator" style="font-size: 1.5rem; color: var(--text-muted); font-weight: 700; margin-bottom: 1rem;">:</span>
-                <div class="time-input-group" style="flex: 1;">
-                  <input class="time-input-big" type="number" id="limitMins" min="0" max="59" value="0" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
-                  <label class="input-label" for="limitMins" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.25rem;">MINUTES</label>
+
+                <span class="time-separator" style="font-size: 1.5rem; color: var(--text-muted); font-weight: 700; margin-bottom: 1.25rem;">:</span>
+
+                <div class="time-input-group" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                  <div class="spin-col" style="display: flex; flex-direction: column; width: 100%;">
+                    <button type="button" class="spin-btn spin-up" onclick="incrementInput('limitMins', 59)" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-bottom: none; border-top-left-radius: 8px; border-top-right-radius: 8px; color: var(--text-muted); padding: 0.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'; this.style.color='var(--green-vivid)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.color='var(--text-muted)'">▲</button>
+                    <input class="time-input-big" type="number" id="limitMins" min="0" max="59" value="0" style="width: 100%; background: var(--bg-base); border: 1px solid var(--border-glass); border-radius: 0; padding: 0.5rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
+                    <button type="button" class="spin-btn spin-down" onclick="decrementInput('limitMins', 0)" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-top: none; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; color: var(--text-muted); padding: 0.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'; this.style.color='var(--green-vivid)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'; this.style.color='var(--text-muted)'">▼</button>
+                  </div>
+                  <label class="input-label" for="limitMins" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.4rem; letter-spacing: 0.05em;">MINUTES</label>
                 </div>
 
               </div>
@@ -459,7 +474,10 @@
 
 
             
-            <button type="submit" class="btn-green full-width" id="setLimitBtn" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600;">Save daily limit</button>
+            <button type="submit" class="btn-premium-save" id="setLimitBtn" style="width: 100%; padding: 0.8rem 1.5rem; font-size: 0.85rem; font-weight: 700; background: rgba(0, 230, 115, 0.06); border: 1.5px solid var(--green-vivid); color: var(--green-vivid); text-transform: uppercase; letter-spacing: 0.08em; border-radius: 30px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 15px rgba(0, 230, 115, 0.1); display: flex; align-items: center; justify-content: center; gap: 0.5rem; outline: none; border-style: solid;" onmouseover="this.style.background='var(--green-vivid)'; this.style.color='#080c10'; this.style.boxShadow='0 0 25px rgba(0, 230, 115, 0.35)';" onmouseout="this.style.background='rgba(0, 230, 115, 0.06)'; this.style.color='var(--green-vivid)'; this.style.boxShadow='0 0 15px rgba(0, 230, 115, 0.1)';" onmousedown="this.style.transform='scale(0.98)';" onmouseup="this.style.transform='scale(1)';">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-save" style="margin-top: -1px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              Save daily limit
+            </button>
             <p class="limits-form-error" id="limitsError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.25rem;"></p>
           </form>
         </div>
@@ -483,24 +501,22 @@
             </li>
           </ul>
 
-          <div class="status-box" id="notifStatusBox" style="margin-top: 2rem; background: rgba(0, 255, 135, 0.05); border: 1px solid rgba(0, 255, 135, 0.2); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <span id="notifStatusText" style="font-size: 0.85rem; color: var(--green-vivid); font-weight: 600;">✓ Notifications enabled</span>
-              <button class="btn-green btn-sm" id="notifEnableBtn" onclick="requestNotifPermission()" style="display:none; font-size: 0.75rem; padding: 0.25rem 0.5rem;">Enable</button>
+          <div class="status-box" id="notifStatusBox" style="margin-top: 2rem; background: var(--green-glow); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; flex: 1;">
+                <span id="notifStatusText" style="font-size: 0.85rem; color: var(--green-vivid); font-weight: 600;">✓ Notifications enabled</span>
+                <span id="notifStatusDesc" style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.3;">Enable desktop notifications for limit alert popups.</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="appNotificationsToggle" onchange="toggleNotifications(this.checked)" aria-label="Toggle notifications option">
+                <span class="slider"></span>
+              </label>
             </div>
-            <div class="sound-control-wrap" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; border-top: 1px solid rgba(0, 255, 135, 0.1); padding-top: 0.5rem; width: 100%;">
-              <span title="Alert Sound Style" style="color: var(--text-muted); font-size: 0.7rem; font-weight: 500;">🔊 Alert Sound:</span>
-              <select id="soundSelectorLimits" onchange="changeSoundStyle(this.value)" title="Select notification alert sound style" aria-label="Select notification alert sound style" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; outline: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem;">
-                <option value="long">Zen Chimes</option>
-                <option value="short">Standard Chirp</option>
-                <option value="alarm">Alarm Bell</option>
-                <option value="drip">Water Droplet</option>
-                <option value="ding">Classic Ding</option>
-                <option value="synth">Synth Echo</option>
-
-              </select>
-              <button onclick="playNotificationSound()" title="Test Sound Style" style="background: transparent; border: none; color: var(--green-vivid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; padding: 0 0.15rem; margin-left: auto; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">▶</button>
+            
+            <div id="notifSetupGuide" style="display: none; padding: 0.5rem; background: rgba(255, 82, 82, 0.1); border: 1px dashed rgba(255, 82, 82, 0.3); border-radius: 6px; font-size: 0.7rem; color: #ff8a8a; line-height: 1.3;">
+              ⚠️ Notifications are blocked! Click the lock/settings icon in your browser address bar, set Notifications to "Allow", and toggle this back on!
             </div>
+            
           </div>
 
         </div>
@@ -513,7 +529,6 @@
             <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 0.25rem;">Today's limits</h3>
             <p class="card-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Matched to sessions logged today</p>
           </div>
-          <button class="btn-outline btn-sm" onclick="fetchLimits()" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; font-weight: 600;">Refresh</button>
         </div>
 
         <div id="limitsList" class="limits-list-new">
@@ -535,8 +550,8 @@
 
   <!-- ░░░ EDIT ACCOUNT MODAL ░░░ -->
   <div class="modal-overlay" id="editAccountModal" role="dialog" aria-modal="true" aria-labelledby="editProfileTitle">
-    <div class="edit-modal" style="max-width: 480px; width: 92%; padding: 1.5rem; position: relative;">
-      <button onclick="closeEditAccountModal()" aria-label="Close modal" style="position: absolute; top: 1rem; right: 1.25rem; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; line-height: 1; padding: 0.25rem; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;" onmouseover="this.style.color='var(--green-vivid)'; this.style.background='rgba(255,255,255,0.05)'; this.style.transform='scale(1.1)'" onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.transform='scale(1)'">&times;</button>
+    <div class="edit-modal">
+      <button class="modal-close-btn" onclick="closeEditAccountModal()" aria-label="Close modal">&times;</button>
       <div class="modal-header" style="margin-bottom: 1rem;">
         <h2 class="modal-title" id="editProfileTitle" style="font-size: 1.35rem; margin-bottom: 0.25rem;">Edit Profile</h2>
         <p class="modal-desc" style="font-size: 0.8rem;">Update your account information below.</p>
@@ -560,19 +575,9 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-            <div class="form-group">
-              <label class="form-label" for="editUsername" style="font-size: 0.75rem;">Username</label>
-              <input type="text" id="editUsername" class="date-input" value="{{ username }}" placeholder="Username" style="width: 100%; padding: 0.35rem 0.6rem;">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="editGender" style="font-size: 0.75rem;">Gender</label>
-              <select id="editGender" class="date-input" style="width: 100%; padding: 0.35rem 0.6rem;" required>
-                <option value="" disabled {% if not gender %}selected{% endif %}>Select gender</option>
-                <option value="male" {% if gender == 'male' %}selected{% endif %}>Male</option>
-                <option value="female" {% if gender == 'female' %}selected{% endif %}>Female</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="editUsername" style="font-size: 0.75rem;">Username</label>
+            <input type="text" id="editUsername" class="date-input" value="{{ username }}" placeholder="Username" style="width: 100%; padding: 0.35rem 0.6rem;">
           </div>
 
           <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -615,7 +620,7 @@
               <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                   <label class="form-label" for="currentPassword" style="font-size: 0.7rem; margin-bottom: 0.2rem;">Current Password</label>
-                  <a href="/forgot-password" target="_blank" style="font-size: 0.7rem; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: color var(--transition); margin-bottom: 0.2rem;" onmouseover="this.style.color='var(--green-vivid)';" onmouseout="this.style.color='var(--text-secondary)';">Forgot?</a>
+                  <a href="/forgot-password" target="_blank" class="pwd-forgot-link">Forgot?</a>
                 </div>
                 <div style="position: relative; display: flex; align-items: center; width: 100%;">
                   <input type="password" id="currentPassword" class="date-input" placeholder="••••••••" style="width: 100%; padding: 0.35rem 2rem 0.35rem 0.6rem;">
@@ -661,14 +666,42 @@
       <h2 id="eyeModalTitle">Time for an Eye Break!</h2>
       <p>Look at something <strong>20 feet away</strong> for <strong>20 seconds</strong>.<br/>Let your eyes relax and breathe.</p>
       <button class="btn-green btn-lg" onclick="closeEyeModal()" aria-label="Acknowledge eye break"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><polyline points="20 6 9 17 4 12"></polyline></svg>Done – Feeling Better!</button>
+    </div>
+  </div>
 
+  <!-- ░░░ TIME LIMIT EXCEEDED MODAL ░░░ -->
+  <style>
+    @keyframes pulseGlowRed {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,82,82,0.4); }
+      50%       { box-shadow: 0 0 20px rgba(255,82,82,0.8), 0 0 40px rgba(255,82,82,0.3); }
+    }
+  </style>
+  <div class="modal-overlay" id="limitExceededModal" role="dialog" aria-modal="true" aria-labelledby="limitExceededTitle">
+    <div class="modal glass-card" style="border: 1px solid rgba(255, 82, 82, 0.35); box-shadow: 0 0 35px rgba(255, 82, 82, 0.15);">
+      <div class="modal-icon" style="background: rgba(255, 82, 82, 0.1); border-color: rgba(255, 82, 82, 0.3); color: #ff5252; animation: pulseGlowRed 2s infinite; display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 1.5rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h2 id="limitExceededTitle" style="color: #ff5252; font-weight: 700; text-align: center; margin-bottom: 0.75rem;">Limit Exceeded!</h2>
+      <p id="limitExceededMessage" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; text-align: center; color: var(--text-color);"></p>
+      <button class="btn-green btn-lg" onclick="closeLimitModal()" aria-label="Acknowledge time limit" style="background: linear-gradient(135deg, #ff5252, #ff7b7b); border: 1px solid rgba(255,82,82,0.5); box-shadow: 0 4px 15px rgba(255,82,82,0.3); color: white; width: 100%;">
+        Okay, I'll take a break! 🌿
+      </button>
     </div>
   </div>
 
   <!-- ░░░ POP-IN INSTRUCTOR ░░░ -->
   <div id="instructor-container" class="instructor-hidden">
     <div class="speech-bubble" id="instructor-bubble">
+      <div class="bubble-header">
+        <span class="bubble-dot"></span>
+        Rose
+      </div>
       <p id="instructor-message">Hello! I'm here to help you maintain your digital balance.</p>
+      <div class="bubble-tail"></div>
     </div>
     <img src="{{ url_for('static', filename='instructor.png') }}" alt="Instructor" class="instructor-image">
   </div>

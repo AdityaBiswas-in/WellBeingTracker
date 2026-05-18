@@ -75,7 +75,7 @@ if (usernameInput && usernameHint) {
 }
 
 // ── Loading spinner on submit ──────────────────────────────────
-['loginForm', 'signupForm'].forEach(id => {
+['loginForm', 'signupForm', 'forgotForm'].forEach(id => {
   const form = document.getElementById(id);
   if (!form) return;
   form.addEventListener('submit', () => {
@@ -88,12 +88,14 @@ if (usernameInput && usernameHint) {
   });
 });
 
-// ── Auto-dismiss error banner after 5 s ───────────────────────
-const errBanner = document.getElementById('authError');
-if (errBanner) {
-  setTimeout(() => {
-    errBanner.style.transition = 'opacity .5s ease';
-    errBanner.style.opacity    = '0';
-    setTimeout(() => errBanner.remove(), 500);
-  }, 5000);
-}
+// ── Auto-dismiss error & success banners after 5 s ─────────────
+['authError', 'authSuccess'].forEach(id => {
+  const banner = document.getElementById(id);
+  if (banner) {
+    setTimeout(() => {
+      banner.style.transition = 'opacity .5s ease';
+      banner.style.opacity    = '0';
+      setTimeout(() => banner.remove(), 500);
+    }, 5000);
+  }
+});
