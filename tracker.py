@@ -409,7 +409,52 @@ def main():
             
         time.sleep(3)
 
+def configure_startup(add=True):
+    import winreg
+    key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    app_name = "WellBeingTracker"
+    
+    if add:
+        script_path = os.path.abspath(__file__)
+        pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
+        if not os.path.exists(pythonw_path):
+            pythonw_path = sys.executable
+        cmd = f'"{pythonw_path}" "{script_path}"'
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, cmd)
+            winreg.CloseKey(key)
+            print("\n[+] Success: WellBeingTracker registered to run silently in background on Windows startup!")
+            print("    You will never have to run tracker.py manually again! It starts with your PC. 🚀")
+            return True
+        except Exception as e:
+            print(f"\n[-] Error registering startup registry key: {e}")
+            return False
+    else:
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE)
+            winreg.DeleteValue(key, app_name)
+            winreg.CloseKey(key)
+            print("\n[+] Success: WellBeingTracker removed from Windows startup registry.")
+            return True
+        except FileNotFoundError:
+            print("\n[*] WellBeingTracker was not registered in startup registry.")
+            return True
+        except Exception as e:
+            print(f"\n[-] Error deleting registry key: {e}")
+            return False
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        if arg == '--startup':
+            configure_startup(add=True)
+            sys.exit(0)
+        elif arg == '--remove-startup':
+            configure_startup(add=False)
+            sys.exit(0)
+            
     try:
         main()
     except KeyboardInterrupt:

@@ -477,6 +477,31 @@ def index():
     except Exception as e:
         print("Error writing tracker config:", e)
 
+    # Auto-spawn tracker.py silently in the background if running locally and not active
+    is_local = request.host.startswith('127.0.0.1') or request.host.startswith('localhost')
+    if is_local:
+        user_id = current_user.id
+        state = active_trackers.get(user_id)
+        is_running = False
+        if state:
+            time_diff = (datetime.now() - state['last_ping']).total_seconds()
+            if time_diff <= 12:
+                is_running = True
+                
+        if not is_running:
+            try:
+                import subprocess
+                import sys
+                tracker_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tracker.py')
+                # Use pythonw.exe to run completely silently in the background
+                pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
+                if not os.path.exists(pythonw_path):
+                    pythonw_path = sys.executable
+                subprocess.Popen([pythonw_path, tracker_path], close_fds=True)
+                print("[+] Auto-spawned tracker.py silently in the background!")
+            except Exception as e:
+                print("[-] Failed to auto-spawn tracker.py:", e)
+
     return render_template('index.html', 
                            username=current_user.username,
                            email=current_user.email,
