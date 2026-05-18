@@ -944,6 +944,35 @@
         alert("Downloaded .tracker_config.json! Place it next to tracker.py");
       }
     };
+
+    // Automatically attempt to sync credentials to local background agent when dashboard loads on cloud
+    document.addEventListener("DOMContentLoaded", async function() {
+      const username = "{{ username }}";
+      const switchToken = "{{ switch_token }}";
+      const serverUrl = window.location.origin;
+      const isCloud = !window.location.hostname.includes('127.0.0.1') && !window.location.hostname.includes('localhost');
+      
+      if (isCloud && switchToken) {
+        console.log("[*] Deployed environment detected. Connecting to local tracker...");
+        try {
+          await fetch('http://127.0.0.1:5000/api/local/sync', {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              server_url: serverUrl,
+              switch_token: switchToken,
+              username: username
+            })
+          });
+          console.log("[+] Automatically connected local computer tracker to cloud dashboard!");
+        } catch (e) {
+          console.log("[-] Local auto-sync server not running on port 5000.");
+        }
+      }
+    });
   </script>
 
   <script src="{{ url_for('static', filename='js/app.js') }}?v=1.1"></script>

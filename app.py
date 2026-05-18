@@ -17,7 +17,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app)
 
 UPLOAD_FOLDER = os.path.join('static', 'uploads', 'avatars')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -545,6 +547,43 @@ def tracker_authorize():
         'switch_token': token,
         'username': user_row['username']
     })
+
+
+@app.route('/api/local/sync', methods=['POST'])
+def local_sync():
+    data = request.get_json() or {}
+    server_url = data.get('server_url', '').strip()
+    switch_token = data.get('switch_token', '').strip()
+    username = data.get('username', '').strip()
+    
+    if not server_url or not switch_token or not username:
+        return jsonify({'success': False, 'error': 'Missing parameters'}), 400
+        
+    config_path = os.path.join(os.path.dirname(__file__), '.tracker_config.json')
+    try:
+        with open(config_path, 'w') as f:
+            json.dump({
+                'server_url': server_url,
+                'switch_token': switch_token,
+                'username': username
+            }, f)
+            
+        # Spawn tracker.py to start tracking to the new address
+        try:
+            import subprocess
+            import sys
+            tracker_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tracker.py')
+            pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
+            if not os.path.exists(pythonw_path):
+                pythonw_path = sys.executable
+            subprocess.Popen([pythonw_path, tracker_path], close_fds=True)
+            print(f"[+] Synced tracker config and spawned background agent pointing to: {server_url}")
+        except Exception as e:
+            print("[-] Error spawning tracker after sync:", e)
+            
+        return jsonify({'success': True, 'message': f'Synced successfully. Tracker is now streaming to {server_url}!'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/account/switch', methods=['POST'])
