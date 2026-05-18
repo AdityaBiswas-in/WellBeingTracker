@@ -7,9 +7,10 @@ document.querySelectorAll('.pwd-toggle').forEach(btn => {
     if (!input || input.tagName !== 'INPUT') return;
     const isHidden = input.type === 'password';
     input.type     = isHidden ? 'text' : 'password';
-    btn.textContent = isHidden ? '🙈' : '👁';
+    btn.textContent = isHidden ? 'Hide' : 'Show';
   });
 });
+
 
 // ── Password strength meter (signup only) ─────────────────────
 const pwdInput    = document.getElementById('password');
@@ -43,12 +44,13 @@ if (confirmInput && confirmHint && pwdInput) {
   const checkMatch = () => {
     if (!confirmInput.value) { confirmHint.textContent = ''; confirmHint.className = 'field-hint'; return; }
     if (confirmInput.value === pwdInput.value) {
-      confirmHint.textContent = '✓ Passwords match';
+      confirmHint.textContent = 'Passwords match';
       confirmHint.className   = 'field-hint ok';
     } else {
-      confirmHint.textContent = '✗ Passwords do not match';
+      confirmHint.textContent = 'Passwords do not match';
       confirmHint.className   = 'field-hint err';
     }
+
   };
   confirmInput.addEventListener('input', checkMatch);
   pwdInput.addEventListener('input', checkMatch);
@@ -65,14 +67,15 @@ if (usernameInput && usernameHint) {
       usernameHint.textContent = 'At least 3 characters required';
       usernameHint.className   = 'field-hint err';
     } else {
-      usernameHint.textContent = '✓ Looks good';
+      usernameHint.textContent = 'Looks good';
       usernameHint.className   = 'field-hint ok';
     }
+
   });
 }
 
 // ── Loading spinner on submit ──────────────────────────────────
-['loginForm', 'signupForm'].forEach(id => {
+['loginForm', 'signupForm', 'forgotForm'].forEach(id => {
   const form = document.getElementById(id);
   if (!form) return;
   form.addEventListener('submit', () => {
@@ -85,12 +88,14 @@ if (usernameInput && usernameHint) {
   });
 });
 
-// ── Auto-dismiss error banner after 5 s ───────────────────────
-const errBanner = document.getElementById('authError');
-if (errBanner) {
-  setTimeout(() => {
-    errBanner.style.transition = 'opacity .5s ease';
-    errBanner.style.opacity    = '0';
-    setTimeout(() => errBanner.remove(), 500);
-  }, 5000);
-}
+// ── Auto-dismiss error & success banners after 5 s ─────────────
+['authError', 'authSuccess'].forEach(id => {
+  const banner = document.getElementById(id);
+  if (banner) {
+    setTimeout(() => {
+      banner.style.transition = 'opacity .5s ease';
+      banner.style.opacity    = '0';
+      setTimeout(() => banner.remove(), 500);
+    }, 5000);
+  }
+});
