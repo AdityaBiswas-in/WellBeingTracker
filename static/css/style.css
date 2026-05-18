@@ -761,7 +761,30 @@ select.date-input option, .date-input option {
 }
 
 /* Set-limit card */
-.limits-set-card { margin-bottom: 0; }
+.limits-set-card {
+  margin-bottom: 0;
+  background: rgba(15, 25, 22, 0.8) !important;
+  border: 1px solid rgba(0, 255, 135, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.limits-list-card {
+  background: rgba(15, 25, 22, 0.8) !important;
+  border: 1px solid rgba(0, 255, 135, 0.2) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.limits-set-card .card-title {
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.25rem !important;
+}
+.limits-set-card .card-subtitle {
+  font-size: 0.85rem !important;
+  color: var(--text-muted) !important;
+}
+
+
+
+
 
 .limits-form { margin-top: 1.25rem; }
 
@@ -774,35 +797,134 @@ select.date-input option, .date-input option {
 
 .limits-time-group { min-width: 200px; }
 
-.limits-time-row {
+.time-inputs {
   display: flex;
-  gap: .6rem;
+  align-items: center;
+  background: var(--bg-base);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  padding: .4rem .6rem;
+  width: fit-content;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
-.limits-time-unit {
+.time-inputs:focus-within {
+  border-color: var(--green-vivid);
+  box-shadow: 0 0 0 3px var(--green-glow-sm);
+}
+.time-input {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  text-align: center;
+  width: 50px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: inherit;
+  -moz-appearance: textfield; /* Hide spinner in Firefox */
+  appearance: none; /* Standard property */
+}
+
+
+.time-input:focus {
+  outline: none;
+  color: var(--green-vivid);
+}
+/* Hide spinner in Chrome, Safari, Edge, Opera */
+.time-input::-webkit-outer-spin-button,
+.time-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.time-separator {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0.1rem;
+}
+.limits-page-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .limits-page-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.limits-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.limits-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.limits-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.time-counter {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .25rem;
-  flex: 1;
+  gap: 0.2rem;
 }
-.limits-time-unit .form-input {
-  text-align: center;
-  padding: .55rem .5rem !important;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-.limits-time-label {
-  font-size: .72rem;
+
+.counter-btn {
+  background: none;
+  border: none;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem;
+  transition: color 0.2s;
 }
+
+.counter-btn:hover {
+  color: var(--green-vivid);
+}
+
+.plus-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
 
 .limits-add-btn {
   white-space: nowrap;
   padding: .6rem 1.4rem !important;
   height: fit-content;
+  background: var(--green-vivid) !important;
+  color: #000 !important;
+  border: none !important;
+  font-weight: 700 !important;
+  border-radius: var(--radius-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.limits-add-btn:hover {
+  box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+  transform: translateY(-1px);
+}
+.limits-add-btn:active {
+  transform: translateY(0);
+}
+
 
 .limits-form-error {
   color: #ff6b6b;
@@ -859,10 +981,35 @@ select.date-input option, .date-input option {
 /* Item header row */
 .limit-item-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: .75rem;
   margin-bottom: .65rem;
 }
+.limit-item-left {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.limit-app-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.limit-item-right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.limit-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.limit-bar-track {
+  flex: 1;
+}
+
 .limit-app-icon { font-size: 1.2rem; flex-shrink: 0; }
 .limit-app-name {
   font-weight: 600;
@@ -963,6 +1110,8 @@ select.date-input option, .date-input option {
   pointer-events: auto;
   filter: drop-shadow(0 0 15px rgba(0,0,0,0.5));
 }
+
+
 
 .speech-bubble {
   position: absolute;
@@ -1447,7 +1596,7 @@ select.date-input option, .date-input option {
 
 .auto-detected-row {
   display: grid;
-  grid-template-columns: auto 120px 100px 1fr auto;
+  grid-template-columns: auto 120px 100px 1fr auto auto;
   align-items: center;
   gap: 1.25rem;
   padding: 0.75rem 1rem;
@@ -1456,6 +1605,7 @@ select.date-input option, .date-input option {
   border-radius: var(--radius-md);
   transition: all var(--transition);
 }
+
 [data-theme="light"] .auto-detected-row {
   background: rgba(0, 0, 0, 0.025);
 }
@@ -1759,7 +1909,30 @@ select.date-input option, .date-input option {
     grid-row: 1 / span 2;
     align-self: center;
   }
+
+  .auto-detected-row button {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    justify-self: end;
+    margin-top: 0.25rem;
+  }
+
+
+  .live-tracker-banner {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+  }
+  .tracker-left {
+    justify-content: center;
+  }
+  .tracker-right {
+    align-items: center;
+  }
 }
+
 
 /* Hide on mobile to prevent overlaps with bottom tab bar */
 @media (max-width: 600px) {
@@ -1772,3 +1945,17 @@ select.date-input option, .date-input option {
     width: 150px;
   }
 }
+
+/* Hide spin buttons for number inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+

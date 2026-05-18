@@ -7,9 +7,10 @@ document.querySelectorAll('.pwd-toggle').forEach(btn => {
     if (!input || input.tagName !== 'INPUT') return;
     const isHidden = input.type === 'password';
     input.type     = isHidden ? 'text' : 'password';
-    btn.textContent = isHidden ? '🙈' : '👁';
+    btn.textContent = isHidden ? 'Hide' : 'Show';
   });
 });
+
 
 // ── Password strength meter (signup only) ─────────────────────
 const pwdInput    = document.getElementById('password');
@@ -43,12 +44,13 @@ if (confirmInput && confirmHint && pwdInput) {
   const checkMatch = () => {
     if (!confirmInput.value) { confirmHint.textContent = ''; confirmHint.className = 'field-hint'; return; }
     if (confirmInput.value === pwdInput.value) {
-      confirmHint.textContent = '✓ Passwords match';
+      confirmHint.textContent = 'Passwords match';
       confirmHint.className   = 'field-hint ok';
     } else {
-      confirmHint.textContent = '✗ Passwords do not match';
+      confirmHint.textContent = 'Passwords do not match';
       confirmHint.className   = 'field-hint err';
     }
+
   };
   confirmInput.addEventListener('input', checkMatch);
   pwdInput.addEventListener('input', checkMatch);
@@ -65,9 +67,10 @@ if (usernameInput && usernameHint) {
       usernameHint.textContent = 'At least 3 characters required';
       usernameHint.className   = 'field-hint err';
     } else {
-      usernameHint.textContent = '✓ Looks good';
+      usernameHint.textContent = 'Looks good';
       usernameHint.className   = 'field-hint ok';
     }
+
   });
 }
 

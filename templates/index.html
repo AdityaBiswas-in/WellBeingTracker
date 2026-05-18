@@ -30,19 +30,20 @@
     </div>
     <div class="nav-tabs" role="tablist">
       <button class="nav-tab active" id="tab-dashboard" role="tab" aria-selected="true" aria-controls="section-dashboard" onclick="switchTab('dashboard')">
-        <span class="tab-icon">📊</span> Dashboard
+        <span class="tab-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span> Dashboard
       </button>
 
       <button class="nav-tab" id="tab-weekly" role="tab" aria-selected="false" aria-controls="section-weekly" onclick="switchTab('weekly')">
-        <span class="tab-icon">📅</span> Weekly
+        <span class="tab-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span> Weekly
       </button>
       <button class="nav-tab" id="tab-habits" role="tab" aria-selected="false" aria-controls="section-habits" onclick="switchTab('habits')">
-        <span class="tab-icon">🌿</span> Habits
+        <span class="tab-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span> Habits
       </button>
       <button class="nav-tab" id="tab-limits" role="tab" aria-selected="false" aria-controls="section-limits" onclick="switchTab('limits')">
-        <span class="tab-icon">⏰</span> Limits
+        <span class="tab-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span> Limits
       </button>
     </div>
+
     <div class="nav-date" id="currentDateTime" aria-label="Current date and time"></div>
     <div class="nav-user">
       <button id="instructorToggleBtn" class="instructor-toggle" onclick="toggleInstructorMobile()" title="Toggle Instructor" aria-label="Toggle Instructor">
@@ -96,27 +97,24 @@
   <!-- ░░░ MAIN ░░░ -->
   <main class="main-container" role="main">
 
-    <!-- ░░░ LIVE TRACKER STATUS BAR ░░░ -->
-    <div id="liveTrackerBanner" class="live-tracker-banner glass-card" style="display: none;">
-      <div class="tracker-left">
-        <span class="pulse-dot"></span>
-        <span class="tracker-status-text">Auto-Tracking Active</span>
-      </div>
-      <div class="tracker-center" id="trackerCurrentApp">
-        <div class="tracker-app-pill">
-          <span class="tracker-app-favicon" id="trackerAppFavicon">💻</span>
-          <span class="tracker-app-name" id="trackerAppName">VS Code</span>
-          <span class="tracker-cat-badge" id="trackerAppCat">Study</span>
-        </div>
-      </div>
-      <div class="tracker-right">
-        <span class="tracker-timer-label">Current Session</span>
-        <span class="tracker-timer-val" id="trackerSessionTimer">0h 00m 00s</span>
-      </div>
-    </div>
-
     <!-- ═══════════════════════════ DASHBOARD ═══════════════════════════ -->
     <section class="tab-section active" id="section-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+
+      <!-- ░░░ LIVE TRACKER STATUS BAR ░░░ -->
+      <div id="liveTrackerBanner" class="live-tracker-banner glass-card" style="display: none; margin-bottom: 1.5rem;">
+        <div class="tracker-left">
+          <div class="tracker-app-pill">
+            <span class="tracker-app-favicon" id="trackerAppFavicon"></span>
+            <span class="tracker-app-name" id="trackerAppName">VS Code</span>
+            <span class="tracker-cat-badge" id="trackerAppCat">Study</span>
+          </div>
+        </div>
+        <div class="tracker-right">
+          <span class="tracker-timer-label">Current Session</span>
+          <span class="tracker-timer-val" id="trackerSessionTimer">0h 00m 00s</span>
+        </div>
+      </div>
+
 
       <!-- Score Hero -->
       <div class="score-hero">
@@ -140,33 +138,34 @@
         <!-- Quick Stats -->
         <div class="quick-stats">
           <div class="stat-card glass-card" id="stat-total">
-            <div class="stat-icon">🕐</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
             <div class="stat-body">
               <span class="stat-val" id="statTotal">0h 0m</span>
               <span class="stat-name">Total Screen Time</span>
             </div>
           </div>
           <div class="stat-card glass-card" id="stat-study">
-            <div class="stat-icon">📚</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg></div>
             <div class="stat-body">
               <span class="stat-val" id="statStudy">0h 0m</span>
               <span class="stat-name">Study Time</span>
             </div>
           </div>
           <div class="stat-card glass-card" id="stat-ent">
-            <div class="stat-icon">🎮</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg></div>
             <div class="stat-body">
               <span class="stat-val" id="statEnt">0h 0m</span>
               <span class="stat-name">Entertainment</span>
             </div>
           </div>
           <div class="stat-card glass-card" id="stat-eye">
-            <div class="stat-icon">👁️</div>
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></div>
             <div class="stat-body">
               <span class="stat-val" id="statEye">0</span>
               <span class="stat-name">Eye Breaks Today</span>
             </div>
           </div>
+
         </div>
       </div>
 
@@ -185,13 +184,15 @@
 
         <!-- Ratio Bar -->
         <div class="chart-card glass-card">
-          <h2 class="card-title">Study vs Entertainment</h2>
+          <h2 class="card-title">Study vs Social</h2>
           <div class="ratio-section">
             <div class="ratio-labels">
-              <span class="ratio-lbl study">📚 Study</span>
-              <span class="ratio-lbl ent">🎮 Entertainment</span>
+              <span class="ratio-lbl study"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>Study</span>
+              <span class="ratio-lbl ent"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg>Social</span>
             </div>
             <div class="ratio-bar-track" role="progressbar" aria-label="Study to entertainment ratio">
+
+
               <div class="ratio-bar-fill" id="ratioFill"></div>
             </div>
             <div class="ratio-pcts">
@@ -200,23 +201,30 @@
             </div>
           </div>
           <div class="balance-tip glass-card-inner" id="balanceTip">
-            <span class="tip-icon">💡</span>
+            <span class="tip-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21h6"></path><path d="M7.5 10.5a5 5 0 1 1 9 0c0 2-1 3.5-2.5 4.5v2h-4v-2c-1.5-1-2.5-2.5-2.5-4.5z"></path></svg></span>
             <span id="balanceTipText">Log your sessions to get personalised tips!</span>
           </div>
 
           <!-- Eye-Care Reminder -->
           <div class="eye-care-panel">
             <div class="eye-care-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
-              <h3 class="eye-care-title" style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.35rem;">👁️ Eye-Care 20-20-20 Rule</h3>
+              <h3 class="eye-care-title" style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.35rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Eye-Care 20-20-20 Rule
+              </h3>
               
               <!-- Sound Style Configurator -->
               <div class="sound-control-wrap" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem;">
                 <span title="Alert Sound Style" style="color: var(--text-muted); font-size: 0.7rem; font-weight: 500;">🔊 Alert:</span>
                 <select id="soundSelector" onchange="changeSoundStyle(this.value)" title="Select notification alert sound style" aria-label="Select notification alert sound style" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; outline: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem;">
-                  <option value="long">🎵 Zen Chimes</option>
-                  <option value="short">⚡ Standard Chirp</option>
-                  <option value="alarm">🔔 Alarm Bell</option>
+                  <option value="long">Zen Chimes</option>
+                  <option value="short">Standard Chirp</option>
+                  <option value="alarm">Alarm Bell</option>
+                  <option value="drip">Water Droplet</option>
+                  <option value="ding">Classic Ding</option>
+                  <option value="synth">Synth Echo</option>
+
                 </select>
+
                 <button onclick="playNotificationSound()" title="Test Sound Style" style="background: transparent; border: none; color: var(--green-vivid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; padding: 0 0.15rem; margin-left: 0.15rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">▶</button>
               </div>
             </div>
@@ -238,17 +246,18 @@
       <div class="glass-card auto-detected-card" style="margin-top: 1.5rem; padding: 1.75rem;">
         <div class="auto-detected-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
           <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-            <span style="color: var(--green-vivid);">🤖</span> Auto-Detected Apps
+            <span style="color: var(--green-vivid);"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg></span> Auto-Detected Apps
           </h2>
           <span class="auto-detected-badge" style="font-size: 0.75rem; color: var(--text-secondary); background: var(--green-glow-sm); border: 1px solid var(--border-glass); padding: 0.25rem 0.6rem; border-radius: 50px; font-weight: 600;">Live Feed</span>
         </div>
         
         <div class="auto-detected-list" id="autoDetectedList">
           <div style="text-align: center; color: var(--text-muted); font-size: 0.88rem; padding: 1.5rem 1rem;">
-            <span>🤖</span>
+            <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg></span>
             <p style="margin-top: 0.5rem;">No auto-detected applications tracked today. Run <code style="font-family: monospace; color: var(--green-vivid);">tracker.py</code> in the background!</p>
           </div>
         </div>
+
       </div>
     </section>
 
@@ -261,13 +270,13 @@
           <h2 class="section-title" id="weeklyTitle">7-Day Overview</h2>
           <div class="weekly-controls" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
             <div class="chart-style-toggle" id="chartStyleToggle">
-              <button class="style-btn" data-style="area" onclick="changeChartStyle('area')" title="Show Stacked Waves">📈 Waves</button>
-              <button class="style-btn active" data-style="bar" onclick="changeChartStyle('bar')" title="Show Stacked Bars">📊 Bars</button>
-              <button class="style-btn" data-style="trend" onclick="changeChartStyle('trend')" title="Show Wellbeing Trend">🎯 Trend</button>
+              <button class="style-btn" data-style="area" onclick="changeChartStyle('area')" title="Show Stacked Waves"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>Waves</button>
+              <button class="style-btn active" data-style="bar" onclick="changeChartStyle('bar')" title="Show Stacked Bars"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>Bars</button>
+              <button class="style-btn" data-style="trend" onclick="changeChartStyle('trend')" title="Show Wellbeing Trend"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>Trend</button>
             </div>
             <!-- Week navigation controls -->
             <div class="week-nav-wrap" style="display: flex; align-items: center; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.2rem;">
-              <button id="btnPrevWeek" onclick="navigateWeek(1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Previous Week">⬅</button>
+              <button id="btnPrevWeek" onclick="navigateWeek(1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Previous Week"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button>
               <select id="weeklyOffsetSelect" class="date-input" onchange="changeWeekOffset(parseInt(this.value))" aria-label="Select Week" style="background: transparent; border: none; color: var(--text-primary); cursor: pointer; outline: none; font-weight: 600; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem; padding: 0.35rem 0.6rem; margin: 0; min-width: 110px;">
                 <option value="0" style="background: var(--bg-surface); color: var(--text-primary);">This Week</option>
                 <option value="1" style="background: var(--bg-surface); color: var(--text-primary);">Last Week</option>
@@ -283,7 +292,7 @@
                 <option value="11" style="background: var(--bg-surface); color: var(--text-primary);">11 Weeks Ago</option>
                 <option value="12" style="background: var(--bg-surface); color: var(--text-primary);">12 Weeks Ago</option>
               </select>
-              <button id="btnNextWeek" onclick="navigateWeek(-1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Next Week" disabled>➡</button>
+              <button id="btnNextWeek" onclick="navigateWeek(-1)" class="style-btn" style="padding: 0.35rem 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;" title="Go to Next Week" disabled><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
             </div>
           </div>
         </div>
@@ -297,8 +306,9 @@
         <!-- Selected Day Details Container -->
         <div class="selected-day-container" id="selectedDayContainer" style="display: none; margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 2rem;">
           <h3 class="card-title" style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-family: 'Space Grotesk', sans-serif;">
-            <span>📅</span> Detailed Daily Breakdown: <span id="detailDayTitle" style="color: var(--green-vivid);">Sunday</span>
+            <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span> Detailed Daily Breakdown: <span id="detailDayTitle" style="color: var(--green-vivid);">Sunday</span>
           </h3>
+
           <div class="selected-day-layout">
             <!-- Left Panel: Score Ring -->
             <div class="glass-card-inner detail-score-panel">
@@ -349,24 +359,25 @@
 
         <!-- Ethical Principles -->
         <div class="glass-card habit-card">
-          <h2 class="section-title">🧘 Ethical Principles</h2>
+          <h2 class="section-title">⚖️ Ethical Principles</h2>
+
           <div class="principle-list">
             <div class="principle-item">
-              <div class="principle-icon">🎯</div>
+              <div class="principle-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></div>
               <div class="principle-body">
                 <h3>Self-Discipline</h3>
                 <p>Set intentional limits on entertainment. Use "Do Not Disturb" windows for focused study.</p>
               </div>
             </div>
             <div class="principle-item">
-              <div class="principle-icon">🧠</div>
+              <div class="principle-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
               <div class="principle-body">
                 <h3>Mental Harmony</h3>
                 <p>Balance screen time with offline activities: journaling, walks, and mindful breaks.</p>
               </div>
             </div>
             <div class="principle-item">
-              <div class="principle-icon">🌐</div>
+              <div class="principle-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></div>
               <div class="principle-body">
                 <h3>Responsible Tech Use</h3>
                 <p>Be conscious of algorithm-driven content. Choose purposeful content over passive scrolling.</p>
@@ -377,79 +388,148 @@
 
         <!-- Healthy Habits Checklist -->
         <div class="glass-card habit-card">
-          <h2 class="section-title">✅ Daily Habits Checklist</h2>
+          <h2 class="section-title"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><polyline points="20 6 9 17 4 12"></polyline></svg>Daily Habits Checklist</h2>
           <div class="checklist" id="habitChecklist"></div>
         </div>
 
         <!-- Tips -->
         <div class="glass-card habit-card full-width">
-          <h2 class="section-title">💡 Digital Wellness Tips</h2>
+          <h2 class="section-title"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><path d="M9 21h6"></path><path d="M7.5 10.5a5 5 0 1 1 9 0c0 2-1 3.5-2.5 4.5v2h-4v-2c-1.5-1-2.5-2.5-2.5-4.5z"></path></svg>Digital Wellness Tips</h2>
           <div class="tips-grid" id="tipsGrid"></div>
         </div>
+
 
       </div>
     </section>
     <!-- ═════════════════════════ TIME LIMITS ═════════════════════════ -->
     <section class="tab-section" id="section-limits" role="tabpanel" aria-labelledby="tab-limits">
 
-      <!-- Notification permission banner -->
-      <div class="notif-banner" id="notifBanner" style="display:none">
-        <span>🔔 Enable browser notifications to get alerts when a limit is hit</span>
-        <button class="btn-green btn-sm" onclick="requestNotifPermission()">Enable Notifications</button>
+      <!-- Title and Subtitle -->
+      <div class="limits-page-header">
+        <h1 class="page-title" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">App Time Limits</h1>
+        <p class="page-subtitle" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Set daily caps for apps and websites. Progress updates when you log screen time.</p>
       </div>
 
-      <!-- Set a new limit -->
-      <div class="glass-card limits-set-card">
-        <h2 class="card-title">⏰ Set App Time Limit</h2>
-        <p class="card-subtitle">Add a daily limit for any app — get a notification when you hit it.</p>
+      <!-- Summary Cards -->
+      <div class="limits-summary-cards" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+        <div class="glass-card summary-card" style="text-align: center; padding: 1.5rem;">
+          <div class="summary-value" id="activeLimitsCount" style="font-size: 2rem; font-weight: 700; color: var(--green-vivid);">0</div>
+          <div class="summary-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 0.5rem;">ACTIVE LIMITS</div>
+        </div>
+        <div class="glass-card summary-card" style="text-align: center; padding: 1.5rem;">
+          <div class="summary-value" id="overLimitCount" style="font-size: 2rem; font-weight: 700; color: #ff4a4a;">0</div>
+          <div class="summary-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 0.5rem;">OVER LIMIT TODAY</div>
+        </div>
+        <div class="glass-card summary-card" style="text-align: center; padding: 1.5rem;">
+          <div class="summary-value" id="onTrackCount" style="font-size: 2rem; font-weight: 700; color: var(--green-vivid);">0</div>
+          <div class="summary-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; margin-top: 0.5rem;">ON TRACK</div>
+        </div>
+      </div>
 
-        <form class="limits-form" id="limitsForm" onsubmit="handleSetLimit(event)">
-          <div class="limits-form-row">
+      <div class="limits-content-grid" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+        <!-- Left Column: Create a Limit -->
+        <div class="glass-card limit-create-card" style="padding: 1.5rem;">
+          <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 0.25rem;">Create a limit</h3>
+          <p class="card-subtitle" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Pick an app or type your own, then set how many minutes per day.</p>
+          
+
+
+          <form class="limits-form" id="limitsForm" onsubmit="handleSetLimit(event)" style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div class="form-group">
-              <label class="form-label" for="limitApp">App / Website</label>
-              <input class="form-input" type="text" id="limitApp" placeholder="e.g. YouTube, Instagram…" list="appSuggestions" required />
-              <datalist id="appSuggestions">
-                <option value="YouTube"></option>
-                <option value="Instagram"></option>
-                <option value="Netflix"></option>
-                <option value="Twitter"></option>
-                <option value="TikTok"></option>
-                <option value="Gaming"></option>
-                <option value="WhatsApp"></option>
-                <option value="Reddit"></option>
-              </datalist>
+              <label class="form-label" for="limitApp" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">APP</label>
+
+              <input class="form-input" type="text" id="limitApp" placeholder="YouTube" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 0.9rem;" />
             </div>
-            <div class="form-group limits-time-group">
-              <label class="form-label">Daily Limit</label>
-              <div class="limits-time-row">
-                <div class="limits-time-unit">
-                  <input class="form-input" type="number" id="limitHours" min="0" max="23" value="1" aria-label="Hours" title="Hours" />
-                  <span class="limits-time-label">hours</span>
+            
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">DAILY TIME LIMIT</label>
+              <div class="time-inputs-row" style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="time-input-group" style="flex: 1;">
+                  <input class="time-input-big" type="number" id="limitHours" min="0" max="23" value="1" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
+                  <label class="input-label" for="limitHours" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.25rem;">HOURS</label>
                 </div>
-                <div class="limits-time-unit">
-                  <input class="form-input" type="number" id="limitMins" min="0" max="59" value="0" aria-label="Minutes" title="Minutes" />
-                  <span class="limits-time-label">min</span>
+                <span class="time-separator" style="font-size: 1.5rem; color: var(--text-muted); font-weight: 700; margin-bottom: 1rem;">:</span>
+                <div class="time-input-group" style="flex: 1;">
+                  <input class="time-input-big" type="number" id="limitMins" min="0" max="59" value="0" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 0.75rem; color: var(--text-primary); font-size: 1.25rem; text-align: center;" />
+                  <label class="input-label" for="limitMins" style="font-size: 0.65rem; color: var(--text-muted); text-align: center; display: block; margin-top: 0.25rem;">MINUTES</label>
                 </div>
+
               </div>
             </div>
-            <button type="submit" class="btn-green limits-add-btn" id="setLimitBtn">Set Limit</button>
+
+
+            
+            <button type="submit" class="btn-green full-width" id="setLimitBtn" style="width: 100%; padding: 0.75rem; font-size: 0.95rem; font-weight: 600;">Save daily limit</button>
+            <p class="limits-form-error" id="limitsError" style="color: #ff4a4a; font-size: 0.8rem; margin-top: 0.25rem;"></p>
+          </form>
+        </div>
+
+        <!-- Right Column: How it works -->
+        <div class="glass-card how-it-works-card" style="padding: 1.5rem;">
+          <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 1.5rem;">How it works</h3>
+          
+          <ul class="steps-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 1.25rem;">
+            <li style="display: flex; gap: 0.75rem; align-items: flex-start;">
+              <span class="step-num" style="background: var(--green-vivid); color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem;">1</span>
+              <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4;">Log screen time on <strong style="color: var(--green-vivid);">Log</strong> tab using the same app name.</p>
+            </li>
+            <li style="display: flex; gap: 0.75rem; align-items: flex-start;">
+              <span class="step-num" style="background: var(--green-vivid); color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem;">2</span>
+              <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4;">Usage bars update automatically for today.</p>
+            </li>
+            <li style="display: flex; gap: 0.75rem; align-items: flex-start;">
+              <span class="step-num" style="background: var(--green-vivid); color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem;">3</span>
+              <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.4;">Enable notifications to get alerted at 100%.</p>
+            </li>
+          </ul>
+
+          <div class="status-box" id="notifStatusBox" style="margin-top: 2rem; background: rgba(0, 255, 135, 0.05); border: 1px solid rgba(0, 255, 135, 0.2); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <span id="notifStatusText" style="font-size: 0.85rem; color: var(--green-vivid); font-weight: 600;">✓ Notifications enabled</span>
+              <button class="btn-green btn-sm" id="notifEnableBtn" onclick="requestNotifPermission()" style="display:none; font-size: 0.75rem; padding: 0.25rem 0.5rem;">Enable</button>
+            </div>
+            <div class="sound-control-wrap" style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; border-top: 1px solid rgba(0, 255, 135, 0.1); padding-top: 0.5rem; width: 100%;">
+              <span title="Alert Sound Style" style="color: var(--text-muted); font-size: 0.7rem; font-weight: 500;">🔊 Alert Sound:</span>
+              <select id="soundSelectorLimits" onchange="changeSoundStyle(this.value)" title="Select notification alert sound style" aria-label="Select notification alert sound style" style="background: transparent; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; outline: none; font-family: 'Space Grotesk', sans-serif; font-size: 0.75rem;">
+                <option value="long">Zen Chimes</option>
+                <option value="short">Standard Chirp</option>
+                <option value="alarm">Alarm Bell</option>
+                <option value="drip">Water Droplet</option>
+                <option value="ding">Classic Ding</option>
+                <option value="synth">Synth Echo</option>
+
+              </select>
+              <button onclick="playNotificationSound()" title="Test Sound Style" style="background: transparent; border: none; color: var(--green-vivid); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; padding: 0 0.15rem; margin-left: auto; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.25)'" onmouseout="this.style.transform='scale(1)'">▶</button>
+            </div>
           </div>
-          <p class="limits-form-error" id="limitsError"></p>
-        </form>
+
+        </div>
       </div>
 
-      <!-- Live limits list -->
-      <div class="glass-card" style="margin-top:1.25rem">
-        <div class="limits-list-header">
-          <h3 class="card-title" style="margin:0">📋 Your Active Limits</h3>
-          <span class="limits-refresh-hint">Updates when you log a session</span>
+      <!-- Bottom: Today's limits -->
+      <div class="glass-card limits-today-card" style="padding: 1.5rem;">
+        <div class="card-header-with-action" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+          <div>
+            <h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 0.25rem;">Today's limits</h3>
+            <p class="card-subtitle" style="color: var(--text-muted); font-size: 0.85rem;">Matched to sessions logged today</p>
+          </div>
+          <button class="btn-outline btn-sm" onclick="fetchLimits()" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; font-weight: 600;">Refresh</button>
         </div>
-        <div id="limitsList" class="limits-list">
-          <div class="empty-state"><span>⏱️</span><p>No limits set yet. Add one above!</p></div>
+
+        <div id="limitsList" class="limits-list-new">
+          <!-- Empty State -->
+          <div class="empty-state-new" style="text-align: center; padding: 3rem 1rem; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+            <div class="empty-icon" style="color: var(--text-muted); margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">No limits yet. Create one to stay mindful of your daily app time.</p>
+            <button class="btn-green" onclick="document.getElementById('limitApp').focus()" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600;">Add your first limit</button>
+          </div>
         </div>
       </div>
 
     </section>
+
 
   </main>
 
@@ -472,8 +552,9 @@
               {% endif %}
             </div>
             <div class="avatar-edit-overlay" style="border-radius: 50%;">
-              <span>📸</span>
+              <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
             </div>
+
           </div>
           <input type="file" id="editAvatar" accept="image/*" style="display: none;" onchange="handleImagePreview(this)">
         </div>
@@ -513,22 +594,23 @@
           <!-- Collapsible Change Password Section -->
           <div class="form-group" style="margin-top: 0.25rem; border-top: 1px solid var(--border-glass); padding-top: 0.5rem;">
             <button type="button" class="btn-outline" id="togglePasswordSec" style="width: 100%; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; padding: 0.4rem 0.75rem; cursor: pointer;" onclick="togglePasswordSection()">
-              <span>🔑 Change Password</span>
+              <span>Change Password</span>
               <span id="pwdSecArrow">▼</span>
             </button>
             
             <div id="passwordSection" style="display: none; margin-top: 0.5rem; flex-direction: column; gap: 0.5rem;">
               <!-- Dynamic Error Banner -->
               <div id="pwdErrorBanner" style="display: none; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(255, 82, 82, 0.08); border: 1px solid rgba(255, 82, 82, 0.25); border-radius: 8px; color: #ff6b6b; font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem;">
-                <span>⚠️</span>
+                <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                 <span id="pwdErrorText"></span>
               </div>
               
               <!-- Dynamic Success Banner -->
               <div id="pwdSuccessBanner" style="display: none; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.25); border-radius: 8px; color: var(--primary-neon); font-size: 0.8rem; font-weight: 500; margin-bottom: 0.25rem;">
-                <span>✅</span>
+                <span><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
                 <span id="pwdSuccessText"></span>
               </div>
+
 
               <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -537,23 +619,24 @@
                 </div>
                 <div style="position: relative; display: flex; align-items: center; width: 100%;">
                   <input type="password" id="currentPassword" class="date-input" placeholder="••••••••" style="width: 100%; padding: 0.35rem 2rem 0.35rem 0.6rem;">
-                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;" onclick="togglePwdVisibility('currentPassword', this)">👁️</button>
+                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.75rem;" onclick="togglePwdVisibility('currentPassword', this)">Show</button>
                 </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="newPassword" style="font-size: 0.7rem; margin-bottom: 0.2rem;">New Password</label>
                 <div style="position: relative; display: flex; align-items: center; width: 100%;">
                   <input type="password" id="newPassword" class="date-input" placeholder="••••••••" style="width: 100%; padding: 0.35rem 2rem 0.35rem 0.6rem;">
-                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;" onclick="togglePwdVisibility('newPassword', this)">👁️</button>
+                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.75rem;" onclick="togglePwdVisibility('newPassword', this)">Show</button>
                 </div>
               </div>
               <div class="form-group">
                 <label class="form-label" for="confirmNewPassword" style="font-size: 0.7rem; margin-bottom: 0.2rem;">Confirm New Password</label>
                 <div style="position: relative; display: flex; align-items: center; width: 100%;">
                   <input type="password" id="confirmNewPassword" class="date-input" placeholder="••••••••" style="width: 100%; padding: 0.35rem 2rem 0.35rem 0.6rem;">
-                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.85rem;" onclick="togglePwdVisibility('confirmNewPassword', this)">👁️</button>
+                  <button type="button" class="pwd-toggle-btn" style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.75rem;" onclick="togglePwdVisibility('confirmNewPassword', this)">Show</button>
                 </div>
               </div>
+
               <button type="button" class="btn-green" style="font-size: 0.8rem; padding: 0.4rem 0.85rem; margin-top: 0.15rem;" onclick="changePassword()">Update Password</button>
             </div>
           </div>
@@ -563,7 +646,8 @@
           <button class="btn-green" onclick="updateAccount()" style="width: 100%; padding: 0.45rem; font-size: 0.85rem;">Save Changes</button>
         </div>
         <div class="delete-account-wrap" style="margin-top: 0.75rem; border-top: 1px solid var(--border-glass); padding-top: 0.75rem; display: flex; justify-content: center;">
-          <button class="btn-outline" onclick="deleteAccount()" style="width: 100%; color: #ff5252; border-color: rgba(255,82,82,0.3); font-size: 0.8rem; padding: 0.4rem; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onmouseover="this.style.background='rgba(255,82,82,0.1)'; this.style.borderColor='#ff5252';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(255,82,82,0.3)';"><span class="item-icon">🗑️</span> Delete Account</button>
+          <button class="btn-outline" onclick="deleteAccount()" style="width: 100%; color: #ff5252; border-color: rgba(255,82,82,0.3); font-size: 0.8rem; padding: 0.4rem; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" onmouseover="this.style.background='rgba(255,82,82,0.1)'; this.style.borderColor='#ff5252';" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(255,82,82,0.3)';"><span class="item-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span> Delete Account</button>
+
         </div>
 
       </div>
@@ -573,10 +657,11 @@
   <!-- ░░░ EYE CARE MODAL ░░░ -->
   <div class="modal-overlay" id="eyeModal" role="dialog" aria-modal="true" aria-labelledby="eyeModalTitle">
     <div class="modal glass-card">
-      <div class="modal-icon">👁️</div>
+      <div class="modal-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></div>
       <h2 id="eyeModalTitle">Time for an Eye Break!</h2>
       <p>Look at something <strong>20 feet away</strong> for <strong>20 seconds</strong>.<br/>Let your eyes relax and breathe.</p>
-      <button class="btn-green btn-lg" onclick="closeEyeModal()" aria-label="Acknowledge eye break">✔ Done – Feeling Better!</button>
+      <button class="btn-green btn-lg" onclick="closeEyeModal()" aria-label="Acknowledge eye break"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;"><polyline points="20 6 9 17 4 12"></polyline></svg>Done – Feeling Better!</button>
+
     </div>
   </div>
 
@@ -600,8 +685,9 @@
       
       <div style="display: flex; gap: 0.75rem; flex-direction: column;">
         <button class="btn-green" onclick="addNewAccount()" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; font-size: 0.95rem; padding: 0.75rem; border-radius: 12px; cursor: pointer; font-weight: 600;">
-          ➕ Add Account
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add Account
         </button>
+
         <button class="btn-outline" onclick="closeSwitchAccountModal()" style="width: 100%; font-size: 0.95rem; padding: 0.7rem; border-radius: 12px; cursor: pointer;">
           Cancel
         </button>
@@ -627,7 +713,8 @@
         container.classList.add('mobile-show');
         if (btn) btn.classList.add('active');
         if (typeof showInstructor === 'function') {
-          showInstructor("Hello! I'm here in mobile view to guide your digital wellbeing. 👩‍🏫");
+          showInstructor("Hello! I'm here in mobile view to guide your digital wellbeing.");
+
         }
       }
     }
@@ -767,12 +854,13 @@
       const input = document.getElementById(inputId);
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '🙈';
+        btn.textContent = 'Hide';
       } else {
         input.type = 'password';
-        btn.textContent = '👁️';
+        btn.textContent = 'Show';
       }
     }
+
   </script>
 
   <script src="{{ url_for('static', filename='js/app.js') }}?v=1.1"></script>

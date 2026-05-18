@@ -396,8 +396,9 @@ function updateDoughnutChart(report, silent = false) {
 // ── Ratio Bar ────────────────────────────────────────────────
 function updateRatioBar(report) {
   const study = report.study;
-  const ent = report.entertainment;
+  const ent = (report.entertainment || 0) + (report.social || 0);
   const sum = study + ent;
+
   
   let fillPct = 50;
   let studyDisplayPct = 0;
@@ -1356,26 +1357,29 @@ function changeChartStyle(style) {
 // HABITS PAGE
 // ══════════════════════════════════════════════════════════════
 const HABITS = [
-  'No phones during meals 🍽️',
-  'Screen-free 30 min before bed 🌙',
-  'Took all 3 eye-care breaks today 👁️',
-  'Studied for at least 2 hours 📚',
-  'Kept entertainment under 2 hours 🎮',
-  'Had at least 30 min of offline activity 🚶',
-  'Charged phone outside the bedroom 🔌',
-  'Reviewed my Balance Score 📊',
+  'No phones during meals',
+  'Screen-free 30 min before bed',
+  'Took all 3 eye-care breaks today',
+  'Studied for at least 2 hours',
+  'Kept entertainment under 2 hours',
+  'Had at least 30 min of offline activity',
+  'Charged phone outside the bedroom',
+  'Reviewed my Balance Score',
 ];
 
+
 const TIPS = [
-  { emoji: '🌙', title: 'Night Mode', body: 'Enable blue-light filter after 8 PM to protect your sleep cycle.' },
-  { emoji: '📵', title: 'App Limits', body: 'Use your phone\'s built-in screen time limits for social media apps.' },
-  { emoji: '🧘', title: 'Mindful Scrolling', body: 'Before opening any app, ask: "What is my purpose right now?"' },
-  { emoji: '📖', title: 'Read Offline', body: 'Replace 30 min of screen time daily with a physical book or journal.' },
-  { emoji: '🏃', title: 'Move Hourly', body: 'Stand up and move for 5 minutes every hour to reset focus.' },
-  { emoji: '🔕', title: 'Notification Detox', body: 'Turn off non-essential notifications. Check messages on your schedule.' },
-  { emoji: '🎯', title: 'Intentional Use', body: 'Set a specific goal before opening YouTube or social media.' },
-  { emoji: '⏰', title: 'Time Blocking', body: 'Allocate fixed time slots for study and entertainment, then stick to them.' },
+  { title: '🌙 Night Mode', body: 'Enable blue-light filter after 8 PM to protect your sleep cycle.' },
+  { title: '⏱️ App Limits', body: 'Use your phone\'s built-in screen time limits for social media apps.' },
+  { title: '🧠 Mindful Scrolling', body: 'Before opening any app, ask: "What is my purpose right now?"' },
+  { title: '📚 Read Offline', body: 'Replace 30 min of screen time daily with a physical book or journal.' },
+  { title: '🚶 Move Hourly', body: 'Stand up and move for 5 minutes every hour to reset focus.' },
+  { title: '🔕 Notification Detox', body: 'Turn off non-essential notifications. Check messages on your schedule.' },
+  { title: '🎯 Intentional Use', body: 'Set a specific goal before opening YouTube or social media.' },
+  { title: '📅 Time Blocking', body: 'Allocate fixed time slots for study and entertainment, then stick to them.' },
 ];
+
+
 
 function initHabits() {
   // Checklist
@@ -1401,10 +1405,10 @@ function initHabits() {
   if (!tipsEl.children.length) {
     tipsEl.innerHTML = TIPS.map(t => `
       <div class="tip-card">
-        <div class="tip-emoji">${t.emoji}</div>
         <div class="tip-title">${t.title}</div>
         <div class="tip-body">${t.body}</div>
       </div>`).join('');
+
   }
 }
 
@@ -1434,12 +1438,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-refresh every 5 minutes
   setInterval(loadDashboard, 5 * 60 * 1000);
 
+  // Auto-refresh limits and check notifications every 10 seconds
+  setInterval(() => {
+    loadAndRenderLimits();
+    checkAndNotify();
+  }, 10000);
+
+
   // Request notification permission if not yet decided
   if ('Notification' in window && Notification.permission === 'default') {
-    document.getElementById('notifBanner') &&
-      (document.getElementById('notifBanner').style.display = 'flex');
+    const banner = document.getElementById('notifBanner');
+    if (banner) banner.style.display = 'flex';
   }
 });
+
 
 // ════════════════════════════════════════════════════════════
 // TIME LIMITS
@@ -1534,8 +1546,61 @@ function playNotificationSound() {
         osc.start(now + delay);
         osc.stop(now + delay + 0.3);
       });
+    } else if (notificationSoundStyle === 'drip') {
+      // 💧 Water Droplet (Short, 0.3s)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.2);
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.4, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (notificationSoundStyle === 'ding') {
+      // 🛎️ Classic Ding (Short, 0.8s)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(2000, now);
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.8);
+    } else if (notificationSoundStyle === 'synth') {
+      // 🎛️ Synth Echo (Medium, ~1.5s)
+      const notes = [600, 500, 400, 300];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.2);
+        
+        gain.gain.setValueAtTime(0, now + idx * 0.2);
+        gain.gain.linearRampToValueAtTime(0.15 / (idx + 1), now + idx * 0.2 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.2 + 0.3);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.2);
+        osc.stop(now + idx * 0.2 + 0.3);
+      });
     }
   } catch (e) {
+
     console.error("Audio playback failed", e);
   }
 }
@@ -1543,8 +1608,16 @@ function playNotificationSound() {
 function changeSoundStyle(style) {
   notificationSoundStyle = style;
   localStorage.setItem('sound_style', style);
+  
+  // Keep both selectors in sync
+  const s1 = document.getElementById('soundSelector');
+  const s2 = document.getElementById('soundSelectorLimits');
+  if (s1) s1.value = style;
+  if (s2) s2.value = style;
+  
   playNotificationSound(); // instantly preview the newly selected sound!
 }
+
 
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
@@ -1575,6 +1648,18 @@ async function initLimits() {
   await loadAndRenderLimits();
 }
 
+function selectPopularApp(appName, hours, mins) {
+  document.getElementById('limitApp').value = appName;
+  document.getElementById('limitHours').value = hours;
+  document.getElementById('limitMins').value = mins;
+  const summaryText = document.getElementById('limitSummaryText');
+  if (summaryText) {
+    summaryText.textContent = `Limit: ${hours}h ${mins}m per day`;
+  }
+}
+
+const fetchLimits = loadAndRenderLimits; // Alias for the refresh button
+
 async function loadAndRenderLimits() {
   const [limitsRes, checkRes] = await Promise.all([
     fetch('/api/limits'),
@@ -1583,7 +1668,6 @@ async function loadAndRenderLimits() {
   const limits = await limitsRes.json();
   const status = await checkRes.json();
 
-  // Build a lookup: app_name (lower) -> status object
   const statusMap = {};
   status.forEach(s => { statusMap[s.app_name.toLowerCase()] = s; });
 
@@ -1592,45 +1676,100 @@ async function loadAndRenderLimits() {
 
 function renderLimits(limits, statusMap) {
   const list = document.getElementById('limitsList');
+  
+  // Update summary cards
+  const activeLimitsEl = document.getElementById('activeLimitsCount');
+  const overLimitEl = document.getElementById('overLimitCount');
+  const onTrackEl = document.getElementById('onTrackCount');
+  
+  if (activeLimitsEl) activeLimitsEl.textContent = limits.length;
+  
+  let over = 0;
+  let onTrack = 0;
+  limits.forEach(lim => {
+    const key = lim.app_name.toLowerCase();
+    const s = statusMap[key] || { exceeded: false };
+    if (s.exceeded) over++;
+    else onTrack++;
+  });
+  
+  if (overLimitEl) overLimitEl.textContent = over;
+  if (onTrackEl) onTrackEl.textContent = onTrack;
+
   if (!limits.length) {
-    list.innerHTML = '<div class="empty-state"><span>⏱️</span><p>No limits set yet. Add one above!</p></div>';
+    list.innerHTML = `
+          <div class="empty-state-new" style="text-align: center; padding: 3rem 1rem; border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+            <div class="empty-icon" style="color: var(--text-muted); margin-bottom: 1rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">No limits yet. Create one to stay mindful of your daily app time.</p>
+            <button class="btn-green" onclick="document.getElementById('limitsForm').scrollIntoView({ behavior: 'smooth' }); setTimeout(() => document.getElementById('limitApp').focus(), 500);" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600;">Add your first limit</button>
+
+          </div>
+    `;
     return;
   }
 
+
   list.innerHTML = limits.map(lim => {
     const key    = lim.app_name.toLowerCase();
-    const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false };
+    const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
     const pct    = s.percent;
-    const barCol = s.exceeded ? '#ff5252' : pct >= 80 ? '#ffd740' : 'var(--green-vivid)';
-    const icon   = APP_ICONS[key] || '📱';
+    const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
+    const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+    const cat    = s.category || 'social';
 
     return `
-      <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}">
+      <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
+
         <div class="limit-item-header">
-          <span class="limit-app-icon">${icon}</span>
-          <span class="limit-app-name">${escHtml(lim.app_name)}</span>
-          ${s.exceeded ? '<span class="limit-badge-over">⚠️ Over Limit</span>' : ''}
-          <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
-          <button class="limit-del-btn" onclick="deleteLimit('${escHtml(lim.app_name)}')" title="Remove limit">✕</button>
+          <div class="limit-item-left">
+            <span class="limit-app-icon">${icon}</span>
+            <div class="limit-app-details">
+              <span class="limit-app-name">${escHtml(lim.app_name)}</span>
+              <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+            </div>
+          </div>
+          <div class="limit-item-right">
+            <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
+            <button class="limit-del-btn" onclick="deleteLimit('${escHtml(lim.app_name)}')" title="Remove limit">✕</button>
+          </div>
         </div>
-        <div class="limit-bar-track">
-          <div class="limit-bar-fill" style="width:${pct}%; background:${barCol}"></div>
+        <div class="limit-bar-row">
+          <div class="limit-bar-track">
+            <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+          </div>
+          ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
         </div>
+
         <div class="limit-bar-labels">
           <span>${pct}% used</span>
           <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
         </div>
       </div>`;
   }).join('');
+
 }
 
 // ── App emoji icon map ─────────────────────────────────────────
 const APP_ICONS = {
-  youtube: '📺', instagram: '📸', netflix: '🎬', twitter: '🐦',
-  tiktok: '🎵', gaming: '🎮', whatsapp: '💬', reddit: '👽',
-  facebook: '👤', discord: '💬', spotify: '🎶', coding: '💻',
-  reading: '📚', work: '💼', study: '📖',
+  youtube: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+  instagram: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>`,
+  netflix: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>`,
+  twitter: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path></svg>`,
+  tiktok: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`,
+  gaming: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg>`,
+  whatsapp: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`,
+  reddit: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+  facebook: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>`,
+  discord: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`,
+  spotify: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`,
+  coding: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`,
+  reading: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>`,
+  work: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
+  study: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>`,
 };
+
 
 // ── Set a new limit ─────────────────────────────────────────────
 async function handleSetLimit(e) {
@@ -1679,6 +1818,22 @@ async function deleteLimit(appName) {
   await loadAndRenderLimits();
 }
 
+// ── Set limit for a specific app from tracker ───────────────────
+function setLimitForApp(encodedAppName) {
+  const appName = decodeURIComponent(encodedAppName);
+  switchTab('limits');
+  const appInput = document.getElementById('limitApp');
+  if (appInput) {
+    appInput.value = appName;
+    // Scroll to form
+    const form = document.getElementById('limitsForm');
+    if (form) form.scrollIntoView({ behavior: 'smooth' });
+    const hoursInput = document.getElementById('limitHours');
+    if (hoursInput) hoursInput.focus();
+  }
+}
+
+
 // ── Check limits and fire notifications ─────────────────────────
 async function checkAndNotify() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -1695,14 +1850,16 @@ async function checkAndNotify() {
 // POP-IN INSTRUCTOR
 // ══════════════════════════════════════════════════════════════
 const INSTRUCTOR_MESSAGES = [
-  "Welcome! I'm here to help you maintain your WellBeingTracker! ✨",
-  "Use the Dashboard to see your WellBeing Score. Aim for 80 or higher! 📈",
-  "Don't forget to log your study and entertainment sessions. 📚",
-  "The 20-20-20 rule is great for eye care. I'll remind you to take breaks! 👁️",
-  "You can set Time Limits for any app. I'll pop up if you go over! ⏰",
-  "Check out the Habits tab for some daily wellness tips! 🌿",
-  "Having a diverse set of activities boosts your WellBeing Score. Try something new! 🎨",
+  "Welcome! 👋 I'm here to help you maintain your WellBeingTracker! ✨",
+  "Use the Dashboard to see your WellBeing Score. Aim for 80 or higher! 🎯",
+  "Don't forget to log your study and entertainment sessions. 📝",
+  "The 20-20-20 rule is great for eye care. I'll remind you to take breaks! 👀",
+  "You can set Time Limits for any app. I'll pop up if you go over! ⏱️",
+  "Check out the Habits tab for some daily wellness tips! 💡",
+  "Having a diverse set of activities boosts your WellBeing Score. Try something new! 🚀",
 ];
+
+
 let messageIndex = 0;
 
 let instructorTimeout = null;
@@ -1953,10 +2110,11 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreEyeTimer();
 
   // Initialize notification sound selection value
-  const selector = document.getElementById('soundSelector');
-  if (selector) {
-    selector.value = notificationSoundStyle;
-  }
+  const s1 = document.getElementById('soundSelector');
+  const s2 = document.getElementById('soundSelectorLimits');
+  if (s1) s1.value = notificationSoundStyle;
+  if (s2) s2.value = notificationSoundStyle;
+
 
   setTimeout(() => {
     showInstructor();
@@ -2050,12 +2208,13 @@ function updateTimerDisplay(totalSecs) {
 }
 
 const CAT_ICONS = {
-  study: '📚',
-  entertainment: '🎮',
-  social: '💬',
-  work: '💼',
-  other: '🔲'
+  study: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>`,
+  entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg>`,
+  social: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`,
+  work: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
+  other: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
 };
+
 
 const CAT_LABELS = {
   study: 'Study',
@@ -2112,8 +2271,9 @@ async function pollTrackerStatus() {
         catEl.className = `tracker-cat-badge auto-cat-${data.current_category}`;
       }
       if (faviconEl) {
-        faviconEl.textContent = CAT_ICONS[data.current_category] || '💻';
+        faviconEl.innerHTML = CAT_ICONS[data.current_category] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
       }
+
       
       // Sync running timer (only if out of sync by > 5 seconds)
       if (Math.abs(trackerSessionSeconds - data.session_duration) > 5) {
@@ -2149,8 +2309,9 @@ async function pollTrackerStatus() {
           // Rebuild HTML from scratch
           let html = '';
           data.auto_detected_apps.forEach(app => {
-            const categoryIcon = CAT_ICONS[app.category] || '💻';
+            const categoryIcon = CAT_ICONS[app.category] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
             const categoryLabel = CAT_LABELS[app.category] || app.category;
+
             const totalMin = app.minutes;
             
             let durationStr = totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m` : `${Math.round(totalMin)}m`;
@@ -2162,6 +2323,7 @@ async function pollTrackerStatus() {
             
             const safeAppNameAttr = app.app_name.replace(/"/g, '&quot;');
             
+            const encodedAppName = encodeURIComponent(app.app_name);
             html += `
               <div class="auto-detected-row" data-app="${safeAppNameAttr}">
                 <div class="auto-app-icon">${categoryIcon}</div>
@@ -2173,8 +2335,13 @@ async function pollTrackerStatus() {
                   <div class="auto-bar-fill" style="width: ${app.percentage}%; background-color: ${barColor}; box-shadow: 0 0 8px ${barColor}; transition: width 0.8s ease-in-out;"></div>
                 </div>
                 <div class="auto-duration">${durationStr} (${app.percentage}%)</div>
+                <button class="btn-outline btn-sm" onclick="setLimitForApp('${encodedAppName}')" title="Set Limit" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-left: 0.5rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-vivid);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span>Limit</span>
+                </button>
               </div>
             `;
+
           });
           listEl.innerHTML = html;
         } else {
@@ -2199,10 +2366,10 @@ async function pollTrackerStatus() {
       } else {
         listEl.innerHTML = `
           <div style="text-align: center; color: var(--text-muted); font-size: 0.88rem; padding: 1.5rem 1rem;">
-            <span>🤖</span>
             <p style="margin-top: 0.5rem;">No auto-detected applications tracked today. Run <code style="font-family: monospace; color: var(--green-vivid);">tracker.py</code> in the background!</p>
           </div>
         `;
+
       }
     }
 
