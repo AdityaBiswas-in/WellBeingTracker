@@ -117,14 +117,18 @@ def clean_app_name(process_name):
     return name.title()
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        return None
-    try:
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"[-] Error reading config file: {e}")
-        return None
+    config_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '.tracker_config.json'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tracker_config.json')
+    ]
+    for path in config_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[-] Error reading config file at {path}: {e}")
+    return None
 
 def send_ping(server_url, app_name, window_title, switch_token):
     url = f"{server_url}/api/tracker/ping"
@@ -262,7 +266,7 @@ def main():
             
         config = load_config()
         if not config:
-            print("[-] No config file found. Please log in or refresh the dashboard.", end="\r")
+            print("[-] No config file found. Please download tracker_config.json from your dashboard and place it in this folder.", end="\r")
             time.sleep(3)
             continue
             
