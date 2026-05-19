@@ -151,11 +151,11 @@
               <span class="stat-name">Study Time</span>
             </div>
           </div>
-          <div class="stat-card glass-card" id="stat-ent">
-            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg></div>
+          <div class="stat-card glass-card" id="stat-social">
+            <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
             <div class="stat-body">
-              <span class="stat-val" id="statEnt">0h 0m</span>
-              <span class="stat-name">Entertainment</span>
+              <span class="stat-val" id="statSocial">0h 0m</span>
+              <span class="stat-name">Social Time</span>
             </div>
           </div>
           <div class="stat-card glass-card" id="stat-eye">
@@ -525,8 +525,8 @@
           <div class="status-box" id="notifStatusBox" style="margin-top: 2rem; background: var(--green-glow); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.75rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; flex: 1;">
-                <span id="notifStatusText" style="font-size: 0.85rem; color: var(--green-vivid); font-weight: 600;">✓ Notifications enabled</span>
-                <span id="notifStatusDesc" style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.3;">Enable desktop notifications for limit alert popups.</span>
+                <span id="notifStatusText" style="font-size: 0.85rem; color: var(--green-vivid); font-weight: 600;">✓ Website Alerts & Sound enabled</span>
+                <span id="notifStatusDesc" style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.3;">Enable in-website limit alert popups and sound effects.</span>
               </div>
               <label class="switch">
                 <input type="checkbox" id="appNotificationsToggle" onchange="toggleNotifications(this.checked)" aria-label="Toggle notifications option">
@@ -691,25 +691,21 @@
   </div>
 
   <!-- ░░░ TIME LIMIT EXCEEDED MODAL ░░░ -->
-  <style>
-    @keyframes pulseGlowRed {
-      0%, 100% { box-shadow: 0 0 8px rgba(255,82,82,0.4); }
-      50%       { box-shadow: 0 0 20px rgba(255,82,82,0.8), 0 0 40px rgba(255,82,82,0.3); }
-    }
-  </style>
   <div class="modal-overlay" id="limitExceededModal" role="dialog" aria-modal="true" aria-labelledby="limitExceededTitle">
-    <div class="modal glass-card" style="border: 1px solid rgba(255, 82, 82, 0.35); box-shadow: 0 0 35px rgba(255, 82, 82, 0.15);">
-      <div class="modal-icon" style="background: rgba(255, 82, 82, 0.1); border-color: rgba(255, 82, 82, 0.3); color: #ff5252; animation: pulseGlowRed 2s infinite; display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 1.5rem;">
+    <div class="modal glass-card">
+      <div class="modal-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
       </div>
-      <h2 id="limitExceededTitle" style="color: #ff5252; font-weight: 700; text-align: center; margin-bottom: 0.75rem;">Limit Exceeded!</h2>
-      <p id="limitExceededMessage" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; text-align: center; color: var(--text-color);"></p>
-      <button class="btn-green btn-lg" onclick="closeLimitModal()" aria-label="Acknowledge time limit" style="background: linear-gradient(135deg, #ff5252, #ff7b7b); border: 1px solid rgba(255,82,82,0.5); box-shadow: 0 4px 15px rgba(255,82,82,0.3); color: white; width: 100%;">
-        Okay, I'll take a break! 🌿
+      <h2 id="limitExceededTitle">Time for a Break!</h2>
+      <p id="limitExceededMessage"></p>
+      <button class="btn-green btn-lg" onclick="closeLimitModal()" aria-label="Acknowledge time limit" style="width: 100%;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Done – Feeling Better!
       </button>
     </div>
   </div>
@@ -749,8 +745,71 @@
     </div>
   </div>
 
+  <!-- ░░░ TRACKER DOWNLOAD PERMISSION MODAL ░░░ -->
+  <div class="modal-overlay" id="trackerDownloadPromptModal" role="dialog" aria-modal="true" aria-labelledby="trackerDownloadPromptTitle" style="display: none; z-index: 3000;">
+    <div class="modal glass-card" style="max-width: 480px; width: 92%; padding: 2.5rem; position: relative; border-radius: var(--radius-xl); box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.25);">
+      
+      <!-- Glowing decorative ambient lighting behind the modal icon -->
+      <div style="position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 180px; height: 180px; background: radial-gradient(circle, rgba(0, 230, 118, 0.15) 0%, transparent 70%); pointer-events: none; z-index: -1;"></div>
+      
+      <!-- Top Neon Accent line -->
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, transparent, var(--green-vivid), transparent); border-top-left-radius: var(--radius-xl); border-top-right-radius: var(--radius-xl);"></div>
+
+      <!-- Close button on top right -->
+      <button class="modal-close-btn" onclick="closeTrackerDownloadPrompt(false)" aria-label="Close modal" style="position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+      
+      <!-- Header Icon -->
+      <div class="modal-icon" style="background: rgba(0, 230, 118, 0.08); border: 2px solid var(--green-vivid); color: var(--green-vivid); display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; margin: 0.5rem auto 1.5rem; font-size: 2.2rem; box-shadow: 0 0 25px rgba(0, 230, 118, 0.35); animation: pulseGlowGreen 2.5s infinite;">
+        ⚡
+      </div>
+      
+      <h2 id="trackerDownloadPromptTitle" style="color: var(--text-primary); font-weight: 800; text-align: center; margin-bottom: 0.75rem; font-family: 'Space Grotesk', sans-serif; font-size: 1.6rem; letter-spacing: -0.5px;">
+        Enable Real-Time Tracker?
+      </h2>
+      
+      <p style="font-size: 0.9rem; line-height: 1.6; text-align: center; color: var(--text-secondary); margin-bottom: 1.75rem;">
+        Supercharge your wellbeing tracking with absolute accuracy. This will download a standalone, pre-configured windowless background agent (<code style="font-family: monospace; color: var(--green-vivid); background: rgba(0, 230, 118, 0.06); padding: 2px 6px; border-radius: 4px;">tracker.exe</code>) designed to silently record app usages, sync instantly, and trigger active wellbeing limit notifications.
+      </p>
+      
+      <!-- High-fidelity feature list items with custom styled checks -->
+      <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 2rem; text-align: left; background: rgba(0, 230, 118, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1.1rem 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-primary);">
+          <span style="color: var(--green-vivid); font-weight: bold; background: rgba(0, 230, 118, 0.1); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0;">✔</span>
+          <span>Silent window & app-usage activity logging</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-primary);">
+          <span style="color: var(--green-vivid); font-weight: bold; background: rgba(0, 230, 118, 0.1); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0;">✔</span>
+          <span>Zero manual entry: logs automatically sync to web</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: var(--text-primary);">
+          <span style="color: var(--green-vivid); font-weight: bold; background: rgba(0, 230, 118, 0.1); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0;">✔</span>
+          <span>Preconfigured credential lock: double-click & run</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+        <button class="btn-green btn-lg" onclick="acceptTrackerDownload()" style="width: 100%; justify-content: center; font-size: 0.95rem; padding: 0.85rem 1.5rem; border-radius: var(--radius-md); font-weight: 800; gap: 10px; text-transform: uppercase; letter-spacing: 0.05em; background: linear-gradient(135deg, var(--green-mid), var(--green-vivid)); box-shadow: 0 4px 20px rgba(0, 230, 118, 0.3); transition: all 0.3s;" onmouseover="this.style.boxShadow='0 6px 30px rgba(0, 230, 118, 0.55)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='0 4px 20px rgba(0, 230, 118, 0.3)'; this.style.transform='translateY(0)';" onmousedown="this.style.transform='scale(0.98)';">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #000; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download Desktop Agent
+        </button>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.25rem;">
+          <button class="btn-outline" onclick="closeTrackerDownloadPrompt(false)" style="justify-content: center; font-size: 0.85rem; padding: 0.7rem; border-radius: var(--radius-md); transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 230, 118, 0.06)'" onmouseout="this.style.background='transparent'">
+            Maybe Later
+          </button>
+          <button class="btn-outline" onclick="closeTrackerDownloadPrompt(true)" style="justify-content: center; font-size: 0.85rem; padding: 0.7rem; border-radius: var(--radius-md); color: var(--text-muted); border-color: var(--border-glass); transition: all 0.2s;" onmouseover="this.style.borderColor='rgba(255, 82, 82, 0.4)'; this.style.color='#ff5252'; this.style.background='rgba(255, 82, 82, 0.05)'" onmouseout="this.style.borderColor='var(--border-glass)'; this.style.color='var(--text-muted)'; this.style.background='transparent'">
+            Don't Ask Again
+          </button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
   <script>
     window.CURRENT_USERNAME = "{{ username }}";
+    window.NOTIFICATIONS_ENABLED = "{{ notifications_enabled }}";
 
     function toggleInstructorMobile() {
       const container = document.getElementById('instructor-container');
@@ -945,6 +1004,44 @@
       }
     };
 
+    window.acceptTrackerDownload = function() {
+      // 1. Download pre-configured setup exe
+      window.location.href = '/download/tracker';
+      
+      // 2. Trigger the JSON config download (which matches the instructions for placing next to tracker.py/exe)
+      setTimeout(() => {
+        if (typeof window.downloadTrackerConfig === 'function') {
+          window.downloadTrackerConfig();
+        }
+      }, 1500);
+      
+      // 3. Mark prompted so we don't nag again
+      localStorage.setItem('tracker_download_prompted', 'true');
+      
+      // 4. Hide modal
+      const promptModal = document.getElementById('trackerDownloadPromptModal');
+      if (promptModal) {
+        promptModal.style.display = 'none';
+      }
+      
+      if (typeof showToast === 'function') {
+        showToast("🚀 Downloading Standalone Tracker and Config!");
+      }
+    };
+
+    window.closeTrackerDownloadPrompt = function(dontAskAgain) {
+      if (dontAskAgain) {
+        localStorage.setItem('tracker_download_prompted', 'true');
+        if (typeof showToast === 'function') {
+          showToast("Preference saved. We won't prompt you again.");
+        }
+      }
+      const promptModal = document.getElementById('trackerDownloadPromptModal');
+      if (promptModal) {
+        promptModal.style.display = 'none';
+      }
+    };
+
     // Automatically attempt to sync credentials to local background agent when dashboard loads on cloud
     document.addEventListener("DOMContentLoaded", async function() {
       const username = "{{ username }}";
@@ -971,6 +1068,31 @@
         } catch (e) {
           console.log("[-] Local auto-sync server not running on port 5000.");
         }
+      }
+
+      // Check if we should prompt the user to download the preconfigured desktop tracker
+      const hasBeenPrompted = localStorage.getItem('tracker_download_prompted') === 'true';
+      if (!hasBeenPrompted) {
+        // Wait 3 seconds after load to not overwhelm the user, then query tracker status to see if it's already active
+        setTimeout(async () => {
+          try {
+            const statusRes = await fetch('/api/tracker/status');
+            const statusData = await statusRes.json();
+            
+            // If the tracker is not already running, show the download prompt modal!
+            if (!statusData.tracker_running) {
+              const promptModal = document.getElementById('trackerDownloadPromptModal');
+              if (promptModal) {
+                promptModal.style.display = 'flex';
+              }
+            } else {
+              // If it's already running, no need to ever prompt them!
+              localStorage.setItem('tracker_download_prompted', 'true');
+            }
+          } catch (err) {
+            console.error("Error checking tracker status for download prompt:", err);
+          }
+        }, 3000);
       }
     });
   </script>

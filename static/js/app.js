@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 // ── Namespaced localStorage for Multi-Account support ─────────
-const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks'];
+const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks', 'app_notifications_enabled'];
 
 function getNamespacedKey(key) {
   if (userSpecificKeys.includes(key)) {
@@ -228,6 +228,7 @@ function switchTab(tab) {
           // Delay if welcoming them for the first time
           setTimeout(() => {
             showInstructor(msg, 7500);
+            playNotificationSound();
           }, visitedTabs.has('limits') ? 0 : 4000);
         }
       })
@@ -360,7 +361,7 @@ function updateScoreRing(score, silent = false) {
 function updateStatCards(report, eyeCount) {
   document.getElementById('statTotal').textContent = fmtMin(report.total);
   document.getElementById('statStudy').textContent = fmtMin(report.study);
-  document.getElementById('statEnt').textContent   = fmtMin(report.entertainment);
+  document.getElementById('statSocial').textContent = fmtMin(report.social);
   document.getElementById('statEye').textContent   = eyeCount;
 }
 
@@ -1489,6 +1490,10 @@ function toggleHabit(idx) {
 // INIT
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.NOTIFICATIONS_ENABLED !== 'undefined') {
+    localStorage.setItem('app_notifications_enabled', window.NOTIFICATIONS_ENABLED === 'false' ? 'false' : 'true');
+  }
+
   loadDashboard();
   // Auto-refresh every 5 minutes
   setInterval(loadDashboard, 5 * 60 * 1000);
@@ -1560,6 +1565,9 @@ function playNotificationSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
 
     if (notificationSoundStyle === 'short') {
@@ -1699,6 +1707,9 @@ function changeSoundStyle(style) {
 
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
+  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
+  if (!appNotifEnabled) return; // Mute completely if notifications are disabled/paused!
+
   if (notifiedToday.has(appName.toLowerCase())) return;  // already notified
   markAppAsNotified(appName);
 
@@ -1716,7 +1727,6 @@ function sendNotification(appName, usedMin, limitMin) {
   }
 
   // If push notifications are supported, enabled in settings, and granted, trigger native notification
-  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
   if (appNotifEnabled && 'Notification' in window && Notification.permission === 'granted') {
     new Notification(`⏰ Time limit reached: ${appName}`, {
       body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
@@ -1744,55 +1754,25 @@ async function checkActiveLimits() {
 }
 
 // ── Load & render limits tab ────────────────────────────────────
+// ── Load & render limits tab ────────────────────────────────────
 async function initLimits() {
-  // Show notif banner if permission not yet decided
-  const banner = document.getElementById('notifBanner');
-  if (banner && 'Notification' in window && Notification.permission === 'default') {
-    banner.style.display = 'flex';
-  }
-
-  // Update visual status indicators in the Limits section
   const statusText = document.getElementById('notifStatusText');
   const toggleInput = document.getElementById('appNotificationsToggle');
   const guideEl = document.getElementById('notifSetupGuide');
   
   const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
 
-  if ('Notification' in window) {
-    if (Notification.permission === 'granted') {
-      if (toggleInput) toggleInput.checked = appNotifEnabled;
-      if (statusText) {
-        if (appNotifEnabled) {
-          statusText.textContent = '✓ Notifications enabled';
-          statusText.style.color = 'var(--green-vivid)';
-        } else {
-          statusText.textContent = '🔕 Notifications paused';
-          statusText.style.color = 'var(--text-muted)';
-        }
-      }
-      if (guideEl) guideEl.style.display = 'none';
-    } else if (Notification.permission === 'denied') {
-      if (toggleInput) toggleInput.checked = false;
-      if (statusText) {
-        statusText.textContent = '❌ Notifications blocked';
-        statusText.style.color = '#ff5252';
-      }
-      if (guideEl) guideEl.style.display = 'block';
+  if (toggleInput) toggleInput.checked = appNotifEnabled;
+  if (statusText) {
+    if (appNotifEnabled) {
+      statusText.textContent = '✓ Website Alerts & Sound enabled';
+      statusText.style.color = 'var(--green-vivid)';
     } else {
-      if (toggleInput) toggleInput.checked = false;
-      if (statusText) {
-        statusText.textContent = '🔔 Notifications not set';
-        statusText.style.color = 'var(--text-muted)';
-      }
-      if (guideEl) guideEl.style.display = 'none';
-    }
-  } else {
-    if (toggleInput) toggleInput.checked = false;
-    if (statusText) {
-      statusText.textContent = '⚠️ Not supported by browser';
-      statusText.style.color = '#ff5252';
+      statusText.textContent = '🔕 Website Alerts & Sound paused';
+      statusText.style.color = 'var(--text-muted)';
     }
   }
+  if (guideEl) guideEl.style.display = 'none';
 
   await loadAndRenderLimits();
 }
@@ -1803,51 +1783,39 @@ function toggleNotifications(enabled) {
   const statusText = document.getElementById('notifStatusText');
   const guideEl = document.getElementById('notifSetupGuide');
 
-  if (!('Notification' in window)) {
-    showToast('⚠️ Your browser does not support desktop notifications.');
-    if (toggleInput) toggleInput.checked = false;
-    return;
-  }
-
   if (enabled) {
-    Notification.requestPermission().then(perm => {
-      if (perm === 'granted') {
-        localStorage.setItem('app_notifications_enabled', 'true');
-        if (statusText) {
-          statusText.textContent = '✓ Notifications enabled';
-          statusText.style.color = 'var(--green-vivid)';
-        }
-        if (guideEl) guideEl.style.display = 'none';
-        showToast('🔔 Desktop notifications enabled! You\'ll get native popups.');
-        
-        // Trigger a native test notification instantly to prove it really works!
-        new Notification('WellBeingTracker ✅', {
-          body: 'Limit alert notifications are now fully enabled!',
-          icon: '/static/icon.png',
-          badge: '/static/icon.png',
-        });
-      } else if (perm === 'denied') {
-        localStorage.setItem('app_notifications_enabled', 'false');
-        if (statusText) {
-          statusText.textContent = '❌ Notifications blocked';
-          statusText.style.color = '#ff5252';
-        }
-        if (guideEl) guideEl.style.display = 'block';
-        if (toggleInput) toggleInput.checked = false;
-        showToast('⚠️ Notifications blocked in browser settings.');
-      } else {
-        localStorage.setItem('app_notifications_enabled', 'false');
-        if (toggleInput) toggleInput.checked = false;
-      }
+    localStorage.setItem('app_notifications_enabled', 'true');
+    // Clear notified list so that they immediately get alerted for any currently exceeded limits!
+    localStorage.setItem('notified_apps_today', '[]');
+    if (typeof notifiedToday !== 'undefined' && notifiedToday.clear) {
+      notifiedToday.clear();
+    }
+    fetch('/api/user/save_notifications_enabled', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled: true })
     });
+    if (statusText) {
+      statusText.textContent = '✓ Website Alerts & Sound enabled';
+      statusText.style.color = 'var(--green-vivid)';
+    }
+    if (guideEl) guideEl.style.display = 'none';
+    showToast('🔔 Website alerts and sound enabled! (No laptop notifications)');
+    // Instantly check and trigger the custom in-website modal notification
+    checkActiveLimits();
   } else {
     localStorage.setItem('app_notifications_enabled', 'false');
+    fetch('/api/user/save_notifications_enabled', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled: false })
+    });
     if (statusText) {
-      statusText.textContent = '🔕 Notifications paused';
+      statusText.textContent = '🔕 Website Alerts & Sound paused';
       statusText.style.color = 'var(--text-muted)';
     }
     if (guideEl) guideEl.style.display = 'none';
-    showToast('🔕 In-app limit notifications are now paused.');
+    showToast('🔕 Website alerts and sound are now paused.');
   }
 }
 
@@ -1912,54 +1880,128 @@ function renderLimits(limits, statusMap) {
             </div>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">No limits yet. Create one to stay mindful of your daily app time.</p>
             <button class="btn-green" onclick="document.getElementById('limitsForm').scrollIntoView({ behavior: 'smooth' }); setTimeout(() => document.getElementById('limitApp').focus(), 500);" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600;">Add your first limit</button>
-
           </div>
     `;
     return;
   }
 
+  // Check if we can do a smooth inline update to prevent flickering/blinking
+  const currentItems = Array.from(list.querySelectorAll('.limit-item'));
+  const currentAppNames = currentItems.map(el => el.id.replace('lim-', ''));
+  const incomingAppNames = limits.map(lim => escHtml(lim.app_name));
+  
+  const setsEqual = currentAppNames.length === incomingAppNames.length && 
+                    currentAppNames.every((val, index) => val === incomingAppNames[index]);
 
-  list.innerHTML = limits.map(lim => {
-    const key    = lim.app_name.toLowerCase();
-    const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
-    const pct    = s.percent;
-    const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
-    const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
-    const cat    = s.category || 'social';
+  if (setsEqual) {
+    limits.forEach(lim => {
+      const key = lim.app_name.toLowerCase();
+      const s = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
+      const pct = s.percent;
+      const itemEl = document.getElementById(`lim-${escHtml(lim.app_name)}`);
+      if (itemEl) {
+        // Exceeded class list update
+        if (s.exceeded) {
+          itemEl.classList.add('limit-exceeded');
+        } else {
+          itemEl.classList.remove('limit-exceeded');
+        }
+        
+        // Category badge update
+        const badgeEl = itemEl.querySelector('.tracker-cat-badge');
+        if (badgeEl) {
+          const cat = s.category || 'social';
+          badgeEl.textContent = cat.toUpperCase();
+          badgeEl.className = `tracker-cat-badge auto-cat-${cat}`;
+        }
+        
+        // Time info update
+        const timeInfoEl = itemEl.querySelector('.limit-time-info');
+        if (timeInfoEl) {
+          timeInfoEl.textContent = `${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}`;
+        }
+        
+        // Update edit button onclick parameter
+        const editBtn = itemEl.querySelector('.limit-edit-btn');
+        if (editBtn) {
+          editBtn.setAttribute('onclick', `startEditLimit(this.dataset.app, ${lim.limit_minutes})`);
+        }
+        
+        // Progress bar width update
+        const fillEl = itemEl.querySelector('.limit-bar-fill');
+        if (fillEl) {
+          fillEl.style.width = `${Math.min(100, pct)}%`;
+        }
+        
+        // Warning icon update
+        const barRow = itemEl.querySelector('.limit-bar-row');
+        if (barRow) {
+          const warningEl = barRow.querySelector('.limit-warning-icon');
+          if (s.exceeded) {
+            if (!warningEl) {
+              const span = document.createElement('span');
+              span.className = 'limit-warning-icon';
+              span.textContent = '⚠️';
+              barRow.appendChild(span);
+            }
+          } else {
+            if (warningEl) {
+              warningEl.remove();
+            }
+          }
+        }
+        
+        // Label update
+        const labelsEl = itemEl.querySelector('.limit-bar-labels');
+        if (labelsEl) {
+          labelsEl.innerHTML = `
+            <span>${pct}% used</span>
+            <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
+          `;
+        }
+      }
+    });
+  } else {
+    // Rebuild HTML from scratch
+    list.innerHTML = limits.map(lim => {
+      const key    = lim.app_name.toLowerCase();
+      const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
+      const pct    = s.percent;
+      const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
+      const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+      const cat    = s.category || 'social';
 
-    return `
-      <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
-
-        <div class="limit-item-header">
-          <div class="limit-item-left">
-            <span class="limit-app-icon">${icon}</span>
-            <div class="limit-app-details">
-              <span class="limit-app-name">${escHtml(lim.app_name)}</span>
-              <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+      return `
+        <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
+          <div class="limit-item-header">
+            <div class="limit-item-left">
+              <span class="limit-app-icon">${icon}</span>
+              <div class="limit-app-details">
+                <span class="limit-app-name">${escHtml(lim.app_name)}</span>
+                <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+              </div>
+            </div>
+            <div class="limit-item-right" id="lim-right-${escHtml(lim.app_name)}">
+              <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
+              <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+              </button>
+              <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
             </div>
           </div>
-          <div class="limit-item-right" id="lim-right-${escHtml(lim.app_name)}">
-            <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
-            <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-            </button>
-            <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
+          <div class="limit-bar-row">
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+            </div>
+            ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
           </div>
-        </div>
-        <div class="limit-bar-row">
-          <div class="limit-bar-track">
-            <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+          <div class="limit-bar-labels">
+            <span>${pct}% used</span>
+            <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
           </div>
-          ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
-        </div>
-
-        <div class="limit-bar-labels">
-          <span>${pct}% used</span>
-          <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
-        </div>
-      </div>`;
-  }).join('');
-
+        </div>`;
+    }).join('');
+  }
 }
 
 // ── App emoji icon map ─────────────────────────────────────────
@@ -2785,17 +2827,17 @@ async function pollTrackerStatus() {
       }
     }
 
-    // Auto-refresh Dashboard components if on the Dashboard tab and auto-tracking is active
+    // Auto-refresh Dashboard components if on the Dashboard tab
     const dashboardSection = document.getElementById('section-dashboard');
-    if (dashboardSection && dashboardSection.classList.contains('active') && data.tracker_running) {
+    if (dashboardSection && dashboardSection.classList.contains('active')) {
       const dashDateInput = document.getElementById('dashDate');
       const dateStr = dashDateInput ? dashDateInput.value : null;
       loadDashboard(dateStr, true);
     }
 
-    // Auto-refresh Limits components if on the Limits tab and auto-tracking is active
+    // Auto-refresh Limits components if on the Limits tab
     const limitsSection = document.getElementById('section-limits');
-    if (limitsSection && limitsSection.classList.contains('active') && data.tracker_running) {
+    if (limitsSection && limitsSection.classList.contains('active')) {
       loadAndRenderLimits();
     }
     
