@@ -1,34 +1,34 @@
 /* ══════════════════════════════════════════════════════════════
-   Digital Well-Being Tracker  ·  Black & Green Theme
+   Digital Well-Being Tracker  ·  Midnight Plum Theme
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Tokens ─────────────────────────────────────────────────── */
 :root {
-  --nav-bg:         rgba(8,13,12,.88);
-  --bg-base:        #080d0c;
-  --bg-surface:     #0d1512;
-  --bg-glass:       rgba(13, 21, 18, 0.75);
-  --border-glass:   rgba(0, 230, 118, 0.15);
-  --border-hover:   rgba(0, 230, 118, 0.45);
+  --nav-bg:         rgba(11, 9, 22, .92);
+  --bg-base:        #0b0917;
+  --bg-surface:     #120f28;
+  --bg-glass:       rgba(18, 15, 40, 0.82);
+  --border-glass:   rgba(167, 139, 250, 0.13);
+  --border-hover:   rgba(167, 139, 250, 0.38);
 
-  --green-vivid:    #00e676;
-  --green-mid:      #00c853;
-  --green-dim:      #1b5e20;
-  --green-glow:     rgba(0, 230, 118, 0.25);
-  --green-glow-sm:  rgba(0, 230, 118, 0.12);
+  /* Hero accent — soft lavender/violet */
+  --green-vivid:    #a78bfa;
+  --green-mid:      #8b5cf6;
+  --green-dim:      #2d1f6b;
+  --green-glow:     rgba(167, 139, 250, 0.22);
+  --green-glow-sm:  rgba(167, 139, 250, 0.09);
 
+  --text-primary:   #e8e4fa;
+  --text-secondary: #a09ac5;
+  --text-muted:     #5c5680;
 
-
-  --text-primary:   #e8f5e9;
-  --text-secondary: #a5d6a7;
-  --text-muted:     #4a7c59;
-
-  --cat-study:      #00e676;
-  --cat-ent:        #ff6e40;
-  --cat-social:     #40c4ff;
-  --cat-work:       #ffd740;
-  --cat-other:      #b39ddb;
-  --ratio-track-bg: rgba(64, 196, 255, 0.25);
+  /* Data category palette */
+  --cat-study:      #60a5fa;
+  --cat-ent:        #fb923c;
+  --cat-social:     #f472b6;
+  --cat-work:       #fbbf24;
+  --cat-other:      #34d399;
+  --ratio-track-bg: rgba(251, 146, 60, 0.18);
 
   --radius-sm:  8px;
   --radius-md:  14px;
@@ -36,7 +36,7 @@
   --radius-xl:  28px;
 
   --transition: 0.25s cubic-bezier(.4,0,.2,1);
-  --shadow-card: 0 8px 32px rgba(0,0,0,.5), 0 0 0 1px var(--border-glass);
+  --shadow-card: 0 8px 32px rgba(0,0,0,.55), 0 0 0 1px var(--border-glass);
 }
 
 [data-theme="light"] {
@@ -53,8 +53,6 @@
   --green-glow:     rgba(0, 122, 255, 0.1);
   --green-glow-sm:  rgba(0, 122, 255, 0.05);
 
-
-
   --text-primary:   #0a1626;
   --text-secondary: #21354d;
   --text-muted:     #526880;
@@ -66,7 +64,7 @@
   --cat-social:     #43a047;
   --cat-work:       #f57f17;
   --cat-other:      #651fff;
-  --ratio-track-bg: rgba(67, 160, 71, 0.2);
+  --ratio-track-bg: rgba(216, 67, 21, 0.2);
 }
 
 /* ── Reset ───────────────────────────────────────────────────── */
@@ -74,7 +72,10 @@
 html { scroll-behavior: smooth; }
 body {
   font-family: 'Inter', 'Space Grotesk', sans-serif;
-  background: var(--bg-base);
+  background:
+    radial-gradient(ellipse 80% 55% at 15% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 88% 100%, rgba(96, 165, 250, 0.05) 0%, transparent 60%),
+    var(--bg-base);
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
@@ -343,12 +344,12 @@ select option {
 .ratio-labels  { display: flex; justify-content: space-between; margin-bottom: .5rem; }
 .ratio-lbl     { font-size: .82rem; font-weight: 500; }
 .ratio-lbl.study { color: var(--cat-study); }
-.ratio-lbl.ent   { color: var(--cat-social); }
+.ratio-lbl.ent   { color: var(--cat-ent); }
 .ratio-bar-track { height: 14px; border-radius: 50px; background: var(--ratio-track-bg); overflow: hidden; }
 .ratio-bar-fill  { height: 100%; border-radius: 50px; background: linear-gradient(90deg, var(--green-vivid), var(--green-mid)); width: 0; transition: width 1s ease; box-shadow: 0 0 8px var(--green-glow); }
 .ratio-pcts { display: flex; justify-content: space-between; margin-top: .4rem; font-size: .85rem; font-weight: 600; }
 #ratioStudyPct { color: var(--cat-study); }
-#ratioEntPct   { color: var(--cat-social); }
+#ratioEntPct   { color: var(--cat-ent); }
 
 .balance-tip { display: flex; align-items: flex-start; gap: .6rem; margin-top: 1rem; }
 .tip-icon { font-size: 1.1rem; flex-shrink: 0; }
@@ -365,7 +366,7 @@ select option {
   display: inline-flex; align-items: center; gap: .5rem;
   padding: .6rem 1.4rem;
   background: linear-gradient(135deg, var(--green-mid), var(--green-vivid));
-  color: #000; font-weight: 700; font-size: .9rem;
+  color: #fff; font-weight: 700; font-size: .9rem;
   border: none; border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition);
@@ -420,7 +421,7 @@ select.date-input {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a7c59' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
   background-size: 1em; 
@@ -496,7 +497,7 @@ select.date-input option, .date-input option {
 /* Toast */
 .toast {
   position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px);
-  background: var(--green-mid); color: #000; font-weight: 600; font-size: .95rem;
+  background: var(--green-mid); color: #fff; font-weight: 600; font-size: .95rem;
   padding: .85rem 2rem; border-radius: 50px;
   box-shadow: 0 8px 32px rgba(0,0,0,.4);
   opacity: 0; transition: all .4s cubic-bezier(.4,0,.2,1);
@@ -620,7 +621,7 @@ select.date-input option, .date-input option {
     transform: translateX(-50%);
     width: calc(100% - 2rem);
     max-width: 440px;
-    background: rgba(8, 13, 12, 0.85);
+    background: rgba(18, 15, 40, 0.85);
     border: 1px solid var(--border-glass);
     border-radius: 50px;
     padding: 0.4rem;
@@ -732,10 +733,10 @@ select.date-input option, .date-input option {
 
 /* ── Glow Pulse Animation ───────────────────────────────────── */
 @keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 8px var(--green-glow); }
-  50%       { box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(0,230,118,.15); }
+  0%, 100% { box-shadow: 0 4px 20px rgba(167, 139, 250, 0.08); }
+  50%       { box-shadow: 0 4px 30px rgba(167, 139, 250, 0.2), 0 0 40px rgba(167, 139, 250, 0.06); }
 }
-.score-card { animation: glowPulse 3s ease-in-out infinite; }
+.score-card { animation: glowPulse 4s ease-in-out infinite; }
 
 /* ── Number counter animation ───────────────────────────────── */
 .stat-val { transition: color .3s ease; }
@@ -790,13 +791,13 @@ select.date-input option, .date-input option {
 
 .limits-set-card {
   margin-bottom: 0;
-  background: rgba(15, 25, 22, 0.8) !important;
-  border: 1px solid rgba(0, 255, 135, 0.2) !important;
+  background: rgba(18, 15, 40, 0.9) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 .limits-list-card {
-  background: rgba(15, 25, 22, 0.8) !important;
-  border: 1px solid rgba(0, 255, 135, 0.2) !important;
+  background: rgba(18, 15, 40, 0.9) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 .limits-set-card .card-title {
@@ -937,7 +938,7 @@ select.date-input option, .date-input option {
   padding: .6rem 1.4rem !important;
   height: fit-content;
   background: var(--green-vivid) !important;
-  color: #000 !important;
+  color: #fff !important;
   border: none !important;
   font-weight: 700 !important;
   border-radius: var(--radius-sm);
@@ -945,7 +946,7 @@ select.date-input option, .date-input option {
 }
 
 .limits-add-btn:hover {
-  box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
   transform: translateY(-1px);
 }
 .limits-add-btn:active {
@@ -1083,9 +1084,9 @@ select.date-input option, .date-input option {
   width: 26px;
   height: 26px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 255, 135, 0.45);
-  background: linear-gradient(135deg, rgba(0, 255, 135, 0.18), rgba(0, 255, 135, 0.04));
-  color: #00FF87;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.18), rgba(167, 139, 250, 0.04));
+  color: #a78bfa;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1097,9 +1098,9 @@ select.date-input option, .date-input option {
 }
 
 .limit-edit-save-btn:hover {
-  background: rgba(0, 255, 135, 0.32);
+  background: rgba(167, 139, 250, 0.32);
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(0, 255, 135, 0.65);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.65);
   transform: translateY(-1.2px);
 }
 
@@ -1293,7 +1294,7 @@ select.date-input option, .date-input option {
   height: 6px;
   background-color: var(--green-vivid);
   border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+  box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
   animation: pulse 1.6s infinite;
   display: inline-block;
 }
@@ -1384,7 +1385,7 @@ select.date-input option, .date-input option {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 3px solid var(--green-vivid);
   padding: 3px;
-  background: rgba(0, 230, 118, 0.1);
+  background: var(--green-glow-sm);
 }
 
 .avatar-preview-container:hover {
@@ -1624,8 +1625,8 @@ select.date-input option, .date-input option {
   margin-bottom: 1.5rem;
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--border-glass) !important;
-  border-top: 2px solid var(--green-vivid) !important; /* neon green top border glow */
-  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.08), var(--shadow-card) !important;
+  border-top: 2px solid var(--green-vivid) !important;
+  box-shadow: 0 4px 20px rgba(167, 139, 250, 0.07), var(--shadow-card) !important;
   background: var(--bg-surface);
   transition: all var(--transition);
 }
@@ -1641,22 +1642,22 @@ select.date-input option, .date-input option {
   height: 8px;
   background-color: var(--green-vivid);
   border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+  box-shadow: 0 0 0 0 var(--green-glow);
   animation: pulse 1.6s infinite;
 }
 
 @keyframes pulse {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7);
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
   }
   70% {
     transform: scale(1);
-    box-shadow: 0 0 0 6px rgba(0, 230, 118, 0);
+    box-shadow: 0 0 0 6px rgba(167, 139, 250, 0);
   }
   100% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 rgba(0, 230, 118, 0);
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
   }
 }
 
@@ -1801,9 +1802,9 @@ select.date-input option, .date-input option {
 }
 
 .auto-cat-study {
-  background: rgba(0, 230, 118, 0.1);
+  background: rgba(96, 165, 250, 0.1);
   color: var(--cat-study);
-  border: 1px solid rgba(0, 230, 118, 0.25);
+  border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
 .auto-cat-entertainment {
@@ -1869,7 +1870,7 @@ select.date-input option, .date-input option {
 
 @keyframes glowPulseAmber {
   0%, 100% { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); }
-  50%       { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), 0 0 10px rgba(0, 230, 118, 0.05); }
+  50%       { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15), 0 0 10px rgba(167, 139, 250, 0.05); }
 }
 
 .tracker-info-icon {
@@ -2067,17 +2068,7 @@ select.date-input option, .date-input option {
 
 
   .live-tracker-banner {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: center;
-    text-align: center;
-    padding: 1rem;
-  }
-  .tracker-left {
-    justify-content: center;
-  }
-  .tracker-right {
-    align-items: center;
+    display: none !important;
   }
 }
 
@@ -2085,12 +2076,7 @@ select.date-input option, .date-input option {
 /* Hide on mobile to prevent overlaps with bottom tab bar */
 @media (max-width: 600px) {
   .tracker-widget {
-    bottom: 5.5rem;
-    left: 1rem;
-    width: 160px;
-  }
-  .tracker-widget.minimized {
-    width: 150px;
+    display: none !important;
   }
 }
 
@@ -2145,7 +2131,7 @@ input[type=number] {
 }
 .switch input:checked + .slider {
   background-color: var(--green-vivid) !important;
-  box-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
   border-color: var(--green-vivid);
 }
 .switch input:checked + .slider::before {
@@ -2156,15 +2142,15 @@ input[type=number] {
    ── PREMIUM GLASSMORPHIC EDIT MODAL OVERHAUL ──
    ========================================================================== */
 .edit-modal {
-  background: rgba(10, 20, 15, 0.78) !important;
+  background: rgba(14, 10, 30, 0.82) !important;
   -webkit-backdrop-filter: blur(24px) !important;
   backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(0, 230, 118, 0.22) !important;
+  border: 1px solid rgba(167, 139, 250, 0.22) !important;
   border-radius: 24px !important;
   box-shadow: 
     0 30px 70px rgba(0, 0, 0, 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 40px rgba(0, 230, 118, 0.03) !important;
+    0 0 40px rgba(167, 139, 250, 0.03) !important;
   padding: 1.25rem 1.5rem !important;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
@@ -2212,7 +2198,7 @@ input[type=number] {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at center, rgba(0, 230, 118, 0.06) 0%, transparent 60%);
+  background: radial-gradient(circle at center, rgba(167, 139, 250, 0.06) 0%, transparent 60%);
   pointer-events: none;
   z-index: 0;
 }
@@ -2254,9 +2240,9 @@ input[type=number] {
   height: 68px !important;
   border-radius: 50% !important;
   padding: 2.5px !important;
-  background: linear-gradient(135deg, var(--green-vivid), #00e5ff) !important;
+  background: linear-gradient(135deg, var(--green-vivid), #818cf8) !important;
   box-shadow: 
-    0 0 20px rgba(0, 230, 118, 0.25),
+    0 0 20px rgba(167, 139, 250, 0.25),
     0 6px 16px rgba(0,0,0,0.5) !important;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   border: none !important;
@@ -2266,18 +2252,18 @@ input[type=number] {
 .edit-modal .avatar-preview-container:hover {
   transform: scale(1.08) rotate(3deg);
   box-shadow: 
-    0 0 30px rgba(0, 230, 118, 0.45),
+    0 0 30px rgba(167, 139, 250, 0.45),
     0 10px 24px rgba(0,0,0,0.5) !important;
 }
 
 .edit-modal .user-avatar.big {
   border-radius: 50% !important;
-  border: 2.5px solid #0a140f !important;
+  border: 2.5px solid #0b0917 !important;
   overflow: hidden;
 }
 
 .edit-modal .avatar-edit-overlay {
-  background: rgba(0, 230, 118, 0.45) !important;
+  background: rgba(167, 139, 250, 0.45) !important;
   backdrop-filter: blur(3px);
   transition: all 0.3s ease;
 }
@@ -2315,7 +2301,7 @@ input[type=number] {
 
 .edit-modal select.date-input {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2300e676' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 0.75rem center !important;
   background-size: 0.9rem !important;
@@ -2331,9 +2317,9 @@ input[type=number] {
 .edit-modal select.date-input:focus,
 .edit-modal textarea.date-input:focus {
   border-color: var(--green-vivid) !important;
-  background: rgba(0, 230, 118, 0.03) !important;
+  background: rgba(167, 139, 250, 0.03) !important;
   box-shadow: 
-    0 0 14px rgba(0, 230, 118, 0.2),
+    0 0 14px rgba(167, 139, 250, 0.2),
     inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
   outline: none !important;
 }
@@ -2345,7 +2331,7 @@ input[type=number] {
 /* Beautiful Change Password Toggle button */
 .edit-modal #togglePasswordSec {
   background: rgba(255, 255, 255, 0.01) !important;
-  border: 1px solid rgba(0, 230, 118, 0.2) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
   border-radius: 10px !important;
   color: var(--green-vivid) !important;
   padding: 0.45rem 0.75rem !important;
@@ -2357,11 +2343,11 @@ input[type=number] {
 }
 
 .edit-modal #togglePasswordSec:hover {
-  background: rgba(0, 230, 118, 0.08) !important;
+  background: rgba(167, 139, 250, 0.08) !important;
   border-color: var(--green-vivid) !important;
   box-shadow: 
-    0 6px 16px rgba(0, 230, 118, 0.15),
-    0 0 8px rgba(0, 230, 118, 0.08) !important;
+    0 6px 16px rgba(167, 139, 250, 0.15),
+    0 0 8px rgba(167, 139, 250, 0.08) !important;
   transform: translateY(-1px);
 }
 
@@ -2372,17 +2358,17 @@ input[type=number] {
 /* Save Changes button glowing luxury gradient */
 .edit-modal .modal-footer .btn-green,
 .edit-modal #passwordSection .btn-green {
-  background: linear-gradient(135deg, #00e575, #00c853) !important;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa) !important;
   border: none !important;
   border-radius: 12px !important;
-  color: #050d0a !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
   font-size: 0.82rem !important;
   letter-spacing: 0.08em !important;
   text-transform: uppercase !important;
   padding: 0.55rem !important;
   box-shadow: 
-    0 6px 20px rgba(0, 230, 118, 0.35),
+    0 6px 20px rgba(167, 139, 250, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
   cursor: pointer !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -2392,7 +2378,7 @@ input[type=number] {
 .edit-modal #passwordSection .btn-green:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 8px 24px rgba(0, 230, 118, 0.55),
+    0 8px 24px rgba(167, 139, 250, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
   filter: brightness(1.05);
 }
@@ -2458,7 +2444,7 @@ input[type=number] {
 
 .edit-modal .pwd-forgot-link:hover {
   color: var(--green-vivid) !important;
-  text-shadow: 0 0 8px rgba(0, 230, 118, 0.4) !important;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.4) !important;
 }
 
 

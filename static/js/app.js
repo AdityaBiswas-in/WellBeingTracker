@@ -33,23 +33,19 @@ localStorage.removeItem = function(key) {
 const CAT_COLORS = {
   get study() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#2e7d32' : '#00e676';
+    return isLight ? '#2e7d32' : '#60a5fa'; // dark: soft blue
   },
   get entertainment() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#d84315' : '#ff6e40';
-  },
-  get social() {
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#43a047' : '#40c4ff';
+    return isLight ? '#d84315' : '#fb923c'; // dark: warm orange
   },
   get work() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#f57f17' : '#ffd740';
+    return isLight ? '#f57f17' : '#fbbf24'; // dark: amber
   },
   get other() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#651fff' : '#b39ddb';
+    return isLight ? '#651fff' : '#34d399'; // dark: emerald
   }
 };
 
@@ -85,7 +81,7 @@ let doughnutChart = null;
 let weeklyChart   = null;
 let currentWeekOffset  = 0;
 let currentWeeklyData  = null;
-let weeklyChartStyle   = 'bar'; // 'area', 'bar', 'trend'
+let weeklyChartStyle   = 'bar'; // 'area', 'bar'
 let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // 'short', 'long', 'alarm'
 
 // ── Eye-care timer ────────────────────────────────────────────
@@ -119,12 +115,12 @@ let eyePaused     = false;
   }
 
   function initParticleArray() {
-    particles = Array.from({ length: 100 }, randomParticle);
+    particles = Array.from({ length: 65 }, randomParticle);
   }
 
   function draw() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const rgb = isLight ? '0,122,255' : '0,230,118';
+    const rgb = isLight ? '0,122,255' : '167,139,250'; // dark: violet, light: original blue
 
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => {
@@ -251,10 +247,10 @@ function fmtMin(minutes) {
 
 function scoreColor(score) {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  if (score >= 80) return isLight ? '#0066cc' : '#00e676';
-  if (score >= 60) return isLight ? '#0088ff' : '#69f0ae';
-  if (score >= 40) return '#ffd740';
-  return '#ff6e40';
+  if (score >= 80) return isLight ? '#0066cc' : '#34d399'; // dark: emerald
+  if (score >= 60) return isLight ? '#0088ff' : '#60a5fa'; // dark: blue
+  if (score >= 40) return '#fbbf24'; // amber
+  return '#f87171'; // soft coral red
 }
 
 
@@ -361,14 +357,14 @@ function updateScoreRing(score, silent = false) {
 function updateStatCards(report, eyeCount) {
   document.getElementById('statTotal').textContent = fmtMin(report.total);
   document.getElementById('statStudy').textContent = fmtMin(report.study);
-  document.getElementById('statSocial').textContent = fmtMin(report.social);
+  document.getElementById('statEntertainment').textContent = fmtMin(report.entertainment);
   document.getElementById('statEye').textContent   = eyeCount;
 }
 
 // ── Doughnut Chart ───────────────────────────────────────────
 function updateDoughnutChart(report, silent = false) {
-  const data = [report.study, report.entertainment, report.social, report.work, report.other];
-  const labels = ['Study', 'Entertainment', 'Social', 'Work', 'Other'];
+  const data = [report.study, report.entertainment, report.work, report.other];
+  const labels = ['Study', 'Entertainment', 'Work', 'Other'];
   const colors = Object.values(CAT_COLORS);
 
   const ctx = document.getElementById('doughnutChart').getContext('2d');
@@ -401,7 +397,7 @@ function updateDoughnutChart(report, silent = false) {
       type: 'doughnut',
       data: {
         labels: ['No data yet'],
-        datasets: [{ data: [1], backgroundColor: ['rgba(0,230,118,.1)'], borderColor: ['rgba(0,230,118,.2)'], borderWidth: 1 }],
+        datasets: [{ data: [1], backgroundColor: ['rgba(167,139,250,.08)'], borderColor: ['rgba(167,139,250,.18)'], borderWidth: 1 }],
       },
       options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 800 } },
     });
@@ -447,7 +443,7 @@ function updateDoughnutChart(report, silent = false) {
 // ── Ratio Bar ────────────────────────────────────────────────
 function updateRatioBar(report) {
   const study = report.study;
-  const ent = (report.entertainment || 0) + (report.social || 0);
+  const ent = report.entertainment || 0;
   const sum = study + ent;
 
   
@@ -515,7 +511,7 @@ function renderSessions(sessions) {
         <span class="session-cat-dot" style="background:${CAT_COLORS[s.category] || '#888'}"></span>
         <span class="session-app">
           ${escHtml(s.app_name)}
-          ${s.is_auto ? '<span class="auto-badge" style="font-size: 0.68rem; color: var(--green-vivid); background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.2); padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🤖 Auto</span>' : ''}
+          ${s.is_auto ? '<span class="auto-badge" style="font-size: 0.68rem; color: var(--green-vivid); background: var(--green-glow-sm); border: 1px solid var(--green-glow); padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🤖 Auto</span>' : ''}
         </span>
         <span class="session-cat">${s.category}</span>
         <span class="session-time">${fmtMin(s.minutes)}</span>
@@ -1032,7 +1028,6 @@ function renderWeeklyChart(data) {
     datasets = [
       { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
       { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
-      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
       { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
       { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
     ].map(cat => ({
@@ -1070,7 +1065,6 @@ function renderWeeklyChart(data) {
     datasets = [
       { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
       { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
-      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
       { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
       { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
     ].map(cat => ({
@@ -1094,65 +1088,6 @@ function renderWeeklyChart(data) {
         grid: { color: gridColor }, 
         ticks: { color: tickColor, callback: v => fmtMin(v) } 
       },
-    };
-  } else if (weeklyChartStyle === 'trend') {
-    chartType = 'bar'; // Root type is bar, line layers can override
-    
-    const scoreColorHex = isLight ? '#0066cc' : '#00e676';
-
-    datasets = [
-      {
-        type: 'line',
-        label: 'Digital Balance Score',
-        data: data.map(d => d.total > 0 ? d.balance_score : null), // null so empty days don't fall to 0
-        borderColor: scoreColorHex,
-        borderWidth: 3,
-        fill: false,
-        tension: 0.35,
-        pointRadius: pointRadius > 0 ? pointRadius + 1 : 3,
-        pointHoverRadius: pointRadius > 0 ? pointRadius + 4 : 6,
-        pointBackgroundColor: scoreColorHex,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        yAxisID: 'yScore',
-        spanGaps: true, // draw smooth connection between active days
-      },
-      {
-        type: 'bar',
-        label: 'Total Screen Time',
-        data: data.map(d => d.total),
-        backgroundColor: isLight ? 'rgba(87, 121, 156, 0.15)' : 'rgba(165, 214, 167, 0.12)',
-        borderColor: isLight ? 'rgba(87, 121, 156, 0.35)' : 'rgba(165, 214, 167, 0.25)',
-        borderWidth: 1,
-        borderRadius: 4,
-        yAxisID: 'yTime',
-      }
-    ];
-
-    scales = {
-      x: { 
-        grid: { color: gridColor }, 
-        ticks: { 
-          color: tickColor,
-          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
-        } 
-      },
-      yScore: {
-        type: 'linear',
-        position: 'left',
-        min: 0,
-        max: 100,
-        grid: { color: gridColor },
-        ticks: { color: scoreColorHex, stepSize: 20 },
-        title: { display: true, text: 'Wellbeing Score', color: scoreColorHex, font: { weight: 'bold', family: 'Space Grotesk' } }
-      },
-      yTime: {
-        type: 'linear',
-        position: 'right',
-        grid: { drawOnChartArea: false }, // avoid duplicate horizontal lines
-        ticks: { color: tickColor, callback: v => fmtMin(v) },
-        title: { display: true, text: 'Screen Time', color: tickColor, font: { weight: 'bold', family: 'Space Grotesk' } }
-      }
     };
   }
 
@@ -1368,7 +1303,6 @@ function selectDay(data, index) {
     const cats = [
       { name: 'Study', key: 'study', emoji: '📖', color: 'var(--cat-study)' },
       { name: 'Entertainment', key: 'entertainment', emoji: '🍿', color: 'var(--cat-ent)' },
-      { name: 'Social', key: 'social', emoji: '💬', color: 'var(--cat-social)' },
       { name: 'Work', key: 'work', emoji: '💼', color: 'var(--cat-work)' },
       { name: 'Other', key: 'other', emoji: '🧩', color: 'var(--cat-other)' },
     ];
@@ -1896,7 +1830,7 @@ function renderLimits(limits, statusMap) {
   if (setsEqual) {
     limits.forEach(lim => {
       const key = lim.app_name.toLowerCase();
-      const s = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
+      const s = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'entertainment' };
       const pct = s.percent;
       const itemEl = document.getElementById(`lim-${escHtml(lim.app_name)}`);
       if (itemEl) {
@@ -1910,7 +1844,7 @@ function renderLimits(limits, statusMap) {
         // Category badge update
         const badgeEl = itemEl.querySelector('.tracker-cat-badge');
         if (badgeEl) {
-          const cat = s.category || 'social';
+          const cat = s.category || 'entertainment';
           badgeEl.textContent = cat.toUpperCase();
           badgeEl.className = `tracker-cat-badge auto-cat-${cat}`;
         }
@@ -1965,11 +1899,11 @@ function renderLimits(limits, statusMap) {
     // Rebuild HTML from scratch
     list.innerHTML = limits.map(lim => {
       const key    = lim.app_name.toLowerCase();
-      const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
+      const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'entertainment' };
       const pct    = s.percent;
       const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
       const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
-      const cat    = s.category || 'social';
+      const cat    = s.category || 'entertainment';
 
       return `
         <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
@@ -2643,7 +2577,6 @@ function updateTimerDisplay(totalSecs) {
 const CAT_ICONS = {
   study: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>`,
   entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg>`,
-  social: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`,
   work: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
   other: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
 };
@@ -2652,7 +2585,6 @@ const CAT_ICONS = {
 const CAT_LABELS = {
   study: 'Study',
   entertainment: 'Entertainment',
-  social: 'Social',
   work: 'Work',
   other: 'Other'
 };
@@ -2750,7 +2682,6 @@ async function pollTrackerStatus() {
             let durationStr = totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m` : `${Math.round(totalMin)}m`;
             let barColor = 'var(--green-vivid)';
             if (app.category === 'entertainment') barColor = 'var(--cat-ent)';
-            else if (app.category === 'social') barColor = 'var(--cat-social)';
             else if (app.category === 'work') barColor = 'var(--cat-work)';
             else if (app.category === 'other') barColor = 'var(--cat-other)';
             
@@ -2814,7 +2745,7 @@ async function pollTrackerStatus() {
               <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 0.75rem;">
                 Running this on a remote server (like Render)? Your local tracker needs to know this website's address and credentials to sync data.
               </div>
-              <button class="btn-outline btn-sm" onclick="downloadTrackerConfig()" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 6.6px; background: rgba(0, 230, 118, 0.05); border-color: rgba(0, 230, 118, 0.2);">
+              <button class="btn-outline btn-sm" onclick="downloadTrackerConfig()" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 6.6px; background: var(--green-glow-sm); border-color: var(--green-glow);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-vivid);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span style="color: var(--text-color);">Download tracker_config.json</span>
               </button>

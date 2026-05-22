@@ -1,11 +1,8 @@
-# pyrefly: ignore [missing-import]
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_file
-# pyrefly: ignore [missing-import]
 from flask_login import (
     LoginManager, UserMixin,
     login_user, logout_user, login_required, current_user
 )
-# pyrefly: ignore [missing-import]
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import json
@@ -174,6 +171,12 @@ def init_db():
         c.execute('ALTER TABLE sessions ADD COLUMN is_auto INTEGER DEFAULT 0')
     except sqlite3.OperationalError:
         pass
+
+    # ── Migration: Migrate all 'social' category sessions to 'entertainment' ──
+    try:
+        c.execute("UPDATE sessions SET category = 'entertainment' WHERE category = 'social'")
+    except Exception as e:
+        print(f"[-] Migration error: {e}")
 
     conn.commit()
     conn.close()
@@ -511,15 +514,15 @@ def index():
                 print("[-] Failed to auto-spawn tracker.py:", e)
 
     return render_template('index.html', 
-                           username=current_user.username,
-                           email=current_user.email,
-                           phone=current_user.phone or '',
-                           bio=current_user.bio or '',
-                           avatar_url=current_user.avatar_url or '',
-                           gender=current_user.gender or '',
-                           switch_token=token,
-                           sound_style=current_user.sound_style or 'short',
-                           notifications_enabled=current_user.notifications_enabled or 'true')
+                        username=current_user.username,
+                        email=current_user.email,
+                        phone=current_user.phone or '',
+                        bio=current_user.bio or '',
+                        avatar_url=current_user.avatar_url or '',
+                        gender=current_user.gender or '',
+                        switch_token=token,
+                        sound_style=current_user.sound_style or 'short',
+                        notifications_enabled=current_user.notifications_enabled or 'true')
 
 
 @app.route('/api/tracker/authorize', methods=['POST'])
@@ -824,11 +827,11 @@ def get_app_category(app_name):
     app_lower = app_name.lower()
     if any(x in app_lower for x in ['vs code', 'visual studio', 'python', 'github', 'sublime', 'pycharm', 'intellij', 'terminal', 'cmd', 'powershell', 'stud', 'learn', 'course', 'coding', 'antigravity']):
         return 'study'
-    elif any(x in app_lower for x in ['youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming', 'microsoft store']):
-
+    elif any(x in app_lower for x in [
+        'youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming', 'microsoft store',
+        'chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger'
+    ]):
         return 'entertainment'
-    elif any(x in app_lower for x in ['chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger']):
-        return 'social'
     elif any(x in app_lower for x in ['zoom', 'slack', 'teams', 'excel', 'word', 'outlook', 'powerpoint', 'meet', 'skype', 'trello', 'notion']):
         return 'work'
     return 'other'
