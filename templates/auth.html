@@ -37,7 +37,18 @@
         <canvas id="threeCanvas" class="three-canvas"></canvas>
 
         <div class="brand-inner">
-          <div class="brand-logo">
+          <div class="brand-logo" style="display: flex; align-items: center; gap: 0.55rem; margin-bottom: 2rem;">
+            <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="28" height="28" style="vertical-align: middle;">
+              <defs>
+                <linearGradient id="logoGradAuth" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color: var(--green-mid);" />
+                  <stop offset="100%" style="stop-color: var(--green-vivid);" />
+                </linearGradient>
+              </defs>
+              <path d="M50,90 C50,90 20,60 20,40 C20,25 35,15 50,35 C65,15 80,25 80,40 C80,60 50,90 50,90 Z" fill="url(#logoGradAuth)" />
+              <path d="M50,90 C50,90 32,70 32,52 C32,40 42,32 50,48 C58,32 68,40 68,52 C68,70 50,90 50,90 Z" fill="#ffffff" opacity="0.25" />
+              <path d="M50,90 C50,90 42,80 42,68 C42,60 46,55 50,65 C54,55 58,60 58,68 C58,80 50,90 50,90 Z" fill="#ffffff" opacity="0.45" />
+            </svg>
             <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
           </div>
           <!-- Dynamic Headline based on JS sliding state -->

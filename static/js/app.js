@@ -2495,19 +2495,20 @@ function handleImagePreview(input) {
     reader.onload = function(e) {
       const previewContainer = document.getElementById('modalAvatarPreview');
       let previewImg = document.getElementById('previewImg');
+      const initials = document.getElementById('previewInitials');
       
       if (!previewImg) {
-        // Replace initials with a new image element
-        const initials = document.getElementById('previewInitials');
-        if (initials) initials.remove();
-        
         previewImg = document.createElement('img');
         previewImg.id = 'previewImg';
         previewImg.className = 'avatar-img';
-        previewContainer.appendChild(previewImg);
+        previewContainer.insertBefore(previewImg, initials);
       }
       
       previewImg.src = e.target.result;
+      previewImg.style.display = 'block';
+      if (initials) {
+        initials.style.display = 'none';
+      }
     };
     reader.readAsDataURL(input.files[0]);
   }

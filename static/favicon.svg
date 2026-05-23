@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#9d4edd;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    <linearGradient id="wellbeingGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <!-- Lightning bolt / S shape -->
-  <path d="M 30 15 
-           L 80 15 
-           L 55 45 
-           L 85 45 
-           L 25 90 
-           L 45 55 
-           L 15 55 Z" 
-        fill="url(#grad1)" 
-        stroke-width="0" />
+  <!-- Symmetrical Lotus / Leaf shape representing growth, harmony and mindfulness -->
+  <path d="M50,90 C50,90 20,60 20,40 C20,25 35,15 50,35 C65,15 80,25 80,40 C80,60 50,90 50,90 Z" 
+        fill="url(#wellbeingGrad)" />
+  <path d="M50,90 C50,90 32,70 32,52 C32,40 42,32 50,48 C58,32 68,40 68,52 C68,70 50,90 50,90 Z" 
+        fill="#ffffff" opacity="0.25" />
+  <path d="M50,90 C50,90 42,80 42,68 C42,60 46,55 50,65 C54,55 58,60 58,68 C58,80 50,90 50,90 Z" 
+        fill="#ffffff" opacity="0.45" />
 </svg>

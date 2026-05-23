@@ -24,7 +24,18 @@
   <!-- ░░░ NAV ░░░ -->
   <nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="nav-logo">
-      <a href="javascript:void(0)" onclick="switchTab('dashboard')" style="text-decoration: none; color: inherit; cursor: pointer;" title="Go to Dashboard">
+      <a href="javascript:void(0)" onclick="switchTab('dashboard')" style="display: flex; align-items: center; gap: 0.55rem; text-decoration: none; color: inherit; cursor: pointer;" title="Go to Dashboard">
+        <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="22" height="22" style="vertical-align: middle;">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color: var(--green-mid);" />
+              <stop offset="100%" style="stop-color: var(--green-vivid);" />
+            </linearGradient>
+          </defs>
+          <path d="M50,90 C50,90 20,60 20,40 C20,25 35,15 50,35 C65,15 80,25 80,40 C80,60 50,90 50,90 Z" fill="url(#logoGrad)" />
+          <path d="M50,90 C50,90 32,70 32,52 C32,40 42,32 50,48 C58,32 68,40 68,52 C68,70 50,90 50,90 Z" fill="#ffffff" opacity="0.25" />
+          <path d="M50,90 C50,90 42,80 42,68 C42,60 46,55 50,65 C54,55 58,60 58,68 C58,80 50,90 50,90 Z" fill="#ffffff" opacity="0.45" />
+        </svg>
         <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
       </a>
     </div>
@@ -56,10 +67,13 @@
       <div class="user-dropdown-wrap">
         <button class="user-avatar-btn" id="userDropdownTrigger" onclick="toggleUserDropdown()" aria-haspopup="true" aria-expanded="false" title="Account Menu">
           <div class="user-avatar">
+            {% set u_parts = username.replace('_', ' ').replace('.', ' ').split() %}
+            {% set u_initials = (u_parts[0][0] + (u_parts[1][0] if u_parts|length > 1 else '')) | upper %}
             {% if avatar_url %}
-              <img src="{{ avatar_url }}" alt="Profile" class="avatar-img">
+              <img src="{{ avatar_url }}" alt="" class="avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+              <span class="avatar-initials" style="display: none;">{{ u_initials }}</span>
             {% else %}
-              {{ username[0]|upper }}
+              <span class="avatar-initials">{{ u_initials }}</span>
             {% endif %}
           </div>
         </button>
@@ -68,9 +82,10 @@
           <div class="dropdown-header">
             <div class="user-avatar big">
               {% if avatar_url %}
-                <img src="{{ avatar_url }}" alt="Profile" class="avatar-img">
+                <img src="{{ avatar_url }}" alt="" class="avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+                <span class="avatar-initials" style="display: none;">{{ u_initials }}</span>
               {% else %}
-                {{ username[0]|upper }}
+                <span class="avatar-initials">{{ u_initials }}</span>
               {% endif %}
             </div>
             <div class="dropdown-user-info">
@@ -565,9 +580,10 @@
           <div class="avatar-preview-container" onclick="document.getElementById('editAvatar').click()" style="cursor: pointer; position: relative; width: 70px; height: 70px; padding: 2px; border-width: 2px;">
             <div class="user-avatar big" id="modalAvatarPreview" style="margin: 0; width: 100%; height: 100%; box-shadow: none;">
               {% if avatar_url %}
-                <img src="{{ avatar_url }}" alt="Preview" class="avatar-img" id="previewImg">
+                <img src="{{ avatar_url }}" alt="" class="avatar-img" id="previewImg" onerror="this.style.display='none'; document.getElementById('previewInitials').style.display='inline-flex';">
+                <span id="previewInitials" style="display: none;">{{ u_initials }}</span>
               {% else %}
-                <span id="previewInitials">{{ username[0]|upper }}</span>
+                <span id="previewInitials">{{ u_initials }}</span>
               {% endif %}
             </div>
             <div class="avatar-edit-overlay" style="border-radius: 50%;">
@@ -888,11 +904,14 @@
           switchSession(acc.username, acc.switchToken);
         };
         
+        const parts = acc.username.replace(/[_\.]/g, ' ').trim().split(/\s+/);
+        const initials = ((parts[0] ? parts[0][0] : '') + (parts[1] ? parts[1][0] : '')).toUpperCase();
         let avatarHtml = '';
         if (acc.avatarUrl) {
-          avatarHtml = `<img src="${acc.avatarUrl}" alt="${acc.username}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+          avatarHtml = `<img src="${acc.avatarUrl}" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+                        <span class="avatar-initials" style="display: none; font-weight:700; color: var(--text-color);">${initials}</span>`;
         } else {
-          avatarHtml = `<span style="font-weight:700; color: var(--text-color);">${acc.username[0].toUpperCase()}</span>`;
+          avatarHtml = `<span class="avatar-initials" style="font-weight:700; color: var(--text-color);">${initials}</span>`;
         }
         
         item.innerHTML = `
