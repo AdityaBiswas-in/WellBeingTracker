@@ -513,7 +513,14 @@ select.date-input option, .date-input option {
 .weekly-card { padding: 2rem; }
 .weekly-bar-wrap { height: 280px; margin-bottom: 1.75rem; }
 
-.weekly-scores { display: grid; grid-template-columns: repeat(7, 1fr); gap: .75rem; margin-bottom: 1.5rem; }
+.weekly-scores {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: .75rem;
+  margin-bottom: 1.5rem;
+  padding-left: 55px;
+  padding-right: 10px;
+}
 .day-score-card {
   background: var(--bg-surface); border: 1px solid var(--border-glass);
   border-radius: var(--radius-md); padding: .85rem .5rem;
@@ -667,6 +674,8 @@ select.date-input option, .date-input option {
     display: flex;
     overflow-x: auto;
     gap: 0.5rem;
+    padding-left: 0;
+    padding-right: 0;
     padding-bottom: 0.75rem;
     margin-bottom: 1rem;
     scrollbar-width: none;

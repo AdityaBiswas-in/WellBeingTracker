@@ -1067,7 +1067,10 @@ function renderWeeklyChart(data) {
       y: { 
         stacked: true, 
         grid: { color: gridColor }, 
-        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+        ticks: { color: tickColor, callback: v => fmtMin(v) },
+        afterFit: (scale) => {
+          scale.width = 55;
+        }
       },
     };
   } else if (weeklyChartStyle === 'bar') {
@@ -1096,7 +1099,10 @@ function renderWeeklyChart(data) {
       y: { 
         stacked: true, 
         grid: { color: gridColor }, 
-        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+        ticks: { color: tickColor, callback: v => fmtMin(v) },
+        afterFit: (scale) => {
+          scale.width = 55;
+        }
       },
     };
   }
@@ -1110,6 +1116,14 @@ function renderWeeklyChart(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          left: 0,
+          right: 10,
+          top: 0,
+          bottom: 0
+        }
+      },
       onClick: (event, elements) => {
         if (elements && elements.length > 0) {
           const index = elements[0].index;

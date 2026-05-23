@@ -171,7 +171,8 @@ def send_ping(server_url, app_name, window_title, switch_token):
         pass
     return None
 
-def send_windows_toast(title, body):
+def send_windows_toast(title, body, sound_style='short'):
+    silent_str = "true" if sound_style == "none" else "false"
     ps_script = f"""
 $xml = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType, Windows.UI.Notifications, ContentType = WindowsRuntime]::ToastText02)
 $textNodes = $xml.GetElementsByTagName("text")
@@ -180,7 +181,7 @@ $null = $textNodes.Item(1).AppendChild($xml.CreateTextNode("{body}"))
 
 $audioNode = $xml.CreateElement("audio")
 $audioNode.SetAttribute("src", "ms-winsoundevent:Notification.Reminder")
-$audioNode.SetAttribute("silent", "false")
+$audioNode.SetAttribute("silent", "{silent_str}")
 $toastNode = $xml.SelectSingleNode("/toast")
 $null = $toastNode.AppendChild($audioNode)
 
@@ -210,7 +211,11 @@ def show_warning_box(app_name, used_min, limit_min, sound_style='short'):
         return f"{mins}m"
 
     print(f"\n[!] LIMIT EXCEEDED WARNING: {app_name} | Used: {fmt_min(used_min)} | Limit: {fmt_min(limit_min)}")
-    # Notifications are handled exclusively by the web browser dashboard with sound and beautiful styling.
+    
+    # Send desktop toast notification when the user is not in the browser
+    title = f"⏰ Time Limit Reached: {app_name}"
+    body = f"You have used {fmt_min(used_min)} of {fmt_min(limit_min)} limit today. Take a break! 🌿"
+    send_windows_toast(title, body, sound_style)
 
 def interactive_setup():
     print("""
