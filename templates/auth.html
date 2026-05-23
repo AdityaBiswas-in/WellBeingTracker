@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome · WellBeingTracker</title>
+  <meta name="description" content="Sign in or create a free Digital Well-Being Tracker account and start building healthier digital habits today." />
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+  <script>
+    (function loadTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.3" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}?v=1.2" />
+
+  <!-- Three.js for 3D animation -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.min.js"></script>
+</head>
+<body data-active-panel="{{ active_panel | default('login') }}">
+  <!-- Floating Theme Toggle -->
+  <button id="themeToggleBtn" aria-label="Toggle Light/Dark Mode" onclick="toggleTheme()" class="theme-toggle theme-toggle-floating" title="Toggle Theme">☀️</button>
+  <!-- Soft background particle canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <div class="auth-scene" id="authScene">
+    
+    <!-- ░░░ BRAND PANEL (Travels Left/Right) ░░░ -->
+    <div class="brand-panel">
+      <div class="auth-brand">
+        <canvas id="threeCanvas" class="three-canvas"></canvas>
+
+        <div class="brand-inner">
+          <div class="brand-logo">
+            <span class="logo-text">WellBeing<span class="logo-accent">Tracker</span></span>
+          </div>
+          <!-- Dynamic Headline based on JS sliding state -->
+          <div class="brand-text-slider">
+            <div class="brand-text-content content-login">
+              <h1 class="brand-headline"><strong>Welcome</strong> back.<br/>Ready to focus?</h1>
+              <p class="brand-sub">Sign in to continue monitoring your screen time and building healthier digital habits.</p>
+            </div>
+            <div class="brand-text-content content-signup">
+              <h1 class="brand-headline"><strong>Track</strong> your digital life.<br/>Own your time.</h1>
+              <p class="brand-sub">Join us today to reclaim your focus, reduce distractions, and improve your daily balance.</p>
+            </div>
+          </div>
+          <div class="brand-features-slider">
+            <!-- Login Features -->
+            <ul class="brand-features features-login">
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Resume Screen Analytics</span>
+                  <span class="feat-desc">Visualize habits instantly with beautiful dynamic timelines.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Review Focus vs Play</span>
+                  <span class="feat-desc">See your study routines and entertainment balance updates.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 5H2v4c0 2.2 1.8 4 4 4h12c2.2 0 4-1.8 4-4V5h-4"></path><path d="M12 13v6"></path><path d="M8 22h8"></path></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Daily Wellness Score</span>
+                  <span class="feat-desc">Measure your progression and check your daily score.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Interactive Dashboard</span>
+                  <span class="feat-desc">Manage all your devices and targets in one central place.</span>
+                </div>
+              </li>
+            </ul>
+
+            <!-- Signup Features -->
+            <ul class="brand-features features-signup">
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Free Lifetime Tracking</span>
+                  <span class="feat-desc">Set up your account in seconds, free forever — no hidden fees.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Custom Screen Limits</span>
+                  <span class="feat-desc">Establish custom timers to block distracting services.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Smart Eye-Care Alerts</span>
+                  <span class="feat-desc">Trigger interactive 20-20-20 rule breaks and reminders.</span>
+                </div>
+              </li>
+              <li>
+                <span class="feat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
+                <div class="feat-content">
+                  <span class="feat-title">Secure Cloud Backups</span>
+                  <span class="feat-desc">Sync and protect your data securely across all devices.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- ░░ MARQUEE TICKER ░░ -->
+        <div class="marquee-wrap" aria-hidden="true">
+          <div class="marquee-row">
+            <div class="marquee-track">
+              <span>Average screen time is 7h/day &nbsp;·&nbsp;</span>
+              <span>20-20-20 rule reduces eye strain &nbsp;·&nbsp;</span>
+              <span>Study sessions improve retention &nbsp;·&nbsp;</span>
+              <span>Breaks boost creativity by 40% &nbsp;·&nbsp;</span>
+              <span>Notifications cut focus by 23 min &nbsp;·&nbsp;</span>
+              <span>Blue light delays sleep by 3h &nbsp;·&nbsp;</span>
+              <span>Offline time lowers anxiety &nbsp;·&nbsp;</span>
+              <span>Track time to reclaim your day &nbsp;·&nbsp;</span>
+              <span>Average screen time is 7h/day &nbsp;·&nbsp;</span>
+              <span>20-20-20 rule reduces eye strain &nbsp;·&nbsp;</span>
+              <span>Study sessions improve retention &nbsp;·&nbsp;</span>
+              <span>Breaks boost creativity by 40% &nbsp;·&nbsp;</span>
+              <span>Notifications cut focus by 23 min &nbsp;·&nbsp;</span>
+              <span>Blue light delays sleep by 3h &nbsp;·&nbsp;</span>
+              <span>Offline time lowers anxiety &nbsp;·&nbsp;</span>
+              <span>Track time to reclaim your day &nbsp;·&nbsp;</span>
+            </div>
+          </div>
+          <div class="marquee-row marquee-row--reverse">
+            <div class="marquee-track marquee-track--reverse">
+              <span>Discipline beats motivation &nbsp;·&nbsp;</span>
+              <span>Set screen time goals daily &nbsp;·&nbsp;</span>
+              <span>Deep work = 4× productivity &nbsp;·&nbsp;</span>
+              <span>Phone-free meals improve bonds &nbsp;·&nbsp;</span>
+              <span>Mindful tech = less stress &nbsp;·&nbsp;</span>
+              <span>Log it. See it. Change it. &nbsp;·&nbsp;</span>
+              <span>Small habits, big life changes &nbsp;·&nbsp;</span>
+              <span>Rest is productive too &nbsp;·&nbsp;</span>
+              <span>Discipline beats motivation &nbsp;·&nbsp;</span>
+              <span>Set screen time goals daily &nbsp;·&nbsp;</span>
+              <span>Deep work = 4× productivity &nbsp;·&nbsp;</span>
+              <span>Phone-free meals improve bonds &nbsp;·&nbsp;</span>
+              <span>Mindful tech = less stress &nbsp;·&nbsp;</span>
+              <span>Log it. See it. Change it. &nbsp;·&nbsp;</span>
+              <span>Small habits, big life changes &nbsp;·&nbsp;</span>
+              <span>Rest is productive too &nbsp;·&nbsp;</span>
+            </div>
+          </div>
+        </div>
+        <div class="brand-glow"></div>
+      </div>
+    </div>
+
+    <!-- ░░░ FORM PANEL (Travels & Flips) ░░░ -->
+    <div class="form-panel">
+      <div class="form-panel-inner">
+        
+        <!-- ░░ FRONT: LOGIN ░░ -->
+        <div class="form-face form-front">
+          <div class="auth-card glass-card">
+            <div class="auth-header">
+              <h2 class="auth-title">Welcome <span>back</span></h2>
+              <p class="auth-subtitle">Sign in to continue your journey</p>
+            </div>
+
+            {% if active_panel == 'login' and error %}
+            <div class="auth-error" id="authError" role="alert">
+              <span class="err-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ error }}
+            </div>
+            {% endif %}
+
+            <form class="auth-form" method="POST" action="/login" id="loginForm" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="identifier">Username or Email</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+                  <input class="form-input auth-input" type="text" id="identifier" name="identifier" placeholder="Enter username or email" autocomplete="username" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="loginPassword">Password</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                  <input class="form-input auth-input" type="password" id="loginPassword" name="password" placeholder="Enter your password" autocomplete="current-password" required />
+                  <button type="button" class="pwd-toggle" aria-label="Toggle password visibility" style="font-size: 0.75rem;">Show</button>
+                </div>
+              </div>
+
+              <div class="auth-options" style="display: flex; justify-content: space-between; align-items: center;">
+                <label class="remember-label">
+                  <input type="checkbox" id="rememberMe" name="remember" checked />
+                  <span class="custom-check"></span>
+                  Keep me signed in
+                </label>
+                <a href="/forgot-password" class="forgot-pwd-link" style="color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color var(--transition);" onmouseover="this.style.color='var(--text-primary)';" onmouseout="this.style.color='var(--text-muted)';">Forgot Password?</a>
+              </div>
+
+              <button type="submit" class="btn-green btn-lg auth-btn" id="loginBtn">
+                <span class="btn-text">Sign In</span>
+                <span class="btn-spinner" hidden>⟳</span>
+              </button>
+            </form>
+
+            <div class="auth-divider"><span>Don't have an account?</span></div>
+            <button type="button" class="btn-outline auth-link-btn" id="showSignupBtn">Create Account</button>
+          </div>
+        </div>
+
+        <!-- ░░ BACK: SIGNUP ░░ -->
+        <div class="form-face form-back">
+          <div class="auth-card glass-card">
+            <div class="auth-header">
+              <h2 class="auth-title">Create <span>account</span></h2>
+              <p class="auth-subtitle">Free forever — no credit card needed</p>
+            </div>
+
+            {% if active_panel == 'signup' and error %}
+            <div class="auth-error" id="authError" role="alert">
+              <span class="err-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ error }}
+            </div>
+            {% endif %}
+
+            <form class="auth-form" method="POST" action="/signup" id="signupForm" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+                  <input class="form-input auth-input" type="text" id="username" name="username" placeholder="Choose a username" autocomplete="username" minlength="3" required />
+                </div>
+                <span class="field-hint" id="usernameHint"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
+                  <input class="form-input auth-input" type="email" id="email" name="email" placeholder="your@email.com" autocomplete="email" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="signupPassword">Password</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+                  <input class="form-input auth-input" type="password" id="signupPassword" name="password" placeholder="Min 6 characters" autocomplete="new-password" minlength="6" required />
+                  <button type="button" class="pwd-toggle" aria-label="Toggle password visibility" style="font-size: 0.75rem;">Show</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="confirm">Confirm Password</label>
+                <div class="input-wrap">
+                  <span class="input-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l1.5 1.5M15.5 7.5L14 6"></path></svg></span>
+                  <input class="form-input auth-input" type="password" id="confirm" name="confirm" placeholder="Repeat password" autocomplete="new-password" required />
+                </div>
+                <span class="field-hint" id="confirmHint"></span>
+              </div>
+
+              <button type="submit" class="btn-green btn-lg auth-btn" id="signupBtn">
+                <span class="btn-text">Create Account</span>
+                <span class="btn-spinner" hidden>⟳</span>
+              </button>
+            </form>
+
+            <div class="auth-divider"><span>Already have an account?</span></div>
+            <button type="button" class="btn-outline auth-link-btn" id="showLoginBtn">Sign In</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/3d-scene.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/auth.js') }}?v=1.2"></script>
+</body>
+</html>

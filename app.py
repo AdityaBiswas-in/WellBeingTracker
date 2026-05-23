@@ -39,6 +39,14 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=3650)
 app.config['REMEMBER_COOKIE_SECURE'] = False   # set True in production (HTTPS)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 
+@app.after_request
+def add_header(r):
+    """Prevent caching of static files in development."""
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
+
 DB_PATH = os.path.join(os.path.dirname(__file__), 'wellbeing.db')
 
 # ─── Flask-Login setup ────────────────────────────────────────────────────────
@@ -84,6 +92,7 @@ def load_user(user_id):
 # ─── Database Initialization ───────────────────────────────────────────────────
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA journal_mode=WAL')
     c = conn.cursor()
 
     # Users table
@@ -186,6 +195,7 @@ init_db()
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 def get_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA journal_mode=WAL')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -268,7 +278,7 @@ def signup():
                 login_user(user, remember=True)
                 return redirect(url_for('index'))
 
-    return render_template('signup.html', error=error)
+    return render_template('auth.html', active_panel='signup', error=error)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -296,7 +306,7 @@ def login():
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
 
-    return render_template('login.html', error=error)
+    return render_template('auth.html', active_panel='login', error=error)
 
 
 # ─── SMTP CONFIG & OTP SENDER ──────────────────────────────────────────────────

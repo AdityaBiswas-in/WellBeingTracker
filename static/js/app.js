@@ -49,19 +49,29 @@ const CAT_COLORS = {
   }
 };
 
-// ── Theme Toggle ───────────────────────────────────────────────
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
+// ── Theme Toggle & Selection ───────────────────────────────────
+function applyThemeSelection(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
   
   const btn = document.getElementById('themeToggleBtn');
-  if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+
+  // Sync the Edit Profile modal dropdown if it exists
+  const themeSelect = document.getElementById('editTheme');
+  if (themeSelect) {
+    themeSelect.value = theme;
+  }
 
   // Force a re-render of current charts and particles to grab new colors
   loadDashboard();
   loadWeekly(currentWeekOffset);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyThemeSelection(newTheme);
 }
 
 // Load saved theme immediately to prevent flashing
@@ -1822,7 +1832,7 @@ function renderLimits(limits, statusMap) {
   // Check if we can do a smooth inline update to prevent flickering/blinking
   const currentItems = Array.from(list.querySelectorAll('.limit-item'));
   const currentAppNames = currentItems.map(el => el.id.replace('lim-', ''));
-  const incomingAppNames = limits.map(lim => escHtml(lim.app_name));
+  const incomingAppNames = limits.map(lim => lim.app_name.replace(/[^a-zA-Z0-9]/g, '_'));
   
   const setsEqual = currentAppNames.length === incomingAppNames.length && 
                     currentAppNames.every((val, index) => val === incomingAppNames[index]);
@@ -1832,8 +1842,46 @@ function renderLimits(limits, statusMap) {
       const key = lim.app_name.toLowerCase();
       const s = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'entertainment' };
       const pct = s.percent;
-      const itemEl = document.getElementById(`lim-${escHtml(lim.app_name)}`);
+      const safeId = lim.app_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const itemEl = document.getElementById(`lim-${safeId}`);
       if (itemEl) {
+        // If the item was in editing mode (so its header is missing), restore the full inner HTML
+        if (!itemEl.querySelector('.limit-item-header')) {
+          const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
+          const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+          const cat    = s.category || 'entertainment';
+
+          itemEl.innerHTML = `
+            <div class="limit-item-header">
+              <div class="limit-item-left">
+                <span class="limit-app-icon">${icon}</span>
+                <div class="limit-app-details">
+                  <span class="limit-app-name">${escHtml(lim.app_name)}</span>
+                  <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+                </div>
+              </div>
+              <div class="limit-item-right" id="lim-right-${safeId}">
+                <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
+                <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                </button>
+                <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
+              </div>
+            </div>
+            <div class="limit-bar-row">
+              <div class="limit-bar-track">
+                <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+              </div>
+              ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
+            </div>
+            <div class="limit-bar-labels">
+              <span>${pct}% used</span>
+              <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
+            </div>
+          `;
+          itemEl.classList.remove('limit-item-editing');
+        }
+
         // Exceeded class list update
         if (s.exceeded) {
           itemEl.classList.add('limit-exceeded');
@@ -1849,16 +1897,17 @@ function renderLimits(limits, statusMap) {
           badgeEl.className = `tracker-cat-badge auto-cat-${cat}`;
         }
         
-        // Time info update
-        const timeInfoEl = itemEl.querySelector('.limit-time-info');
-        if (timeInfoEl) {
-          timeInfoEl.textContent = `${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}`;
-        }
-        
-        // Update edit button onclick parameter
-        const editBtn = itemEl.querySelector('.limit-edit-btn');
-        if (editBtn) {
-          editBtn.setAttribute('onclick', `startEditLimit(this.dataset.app, ${lim.limit_minutes})`);
+        // Time info & edit controls update
+        const rightWrap = itemEl.querySelector('.limit-item-right');
+        if (rightWrap) {
+          const timeInfoEl = rightWrap.querySelector('.limit-time-info');
+          if (timeInfoEl) {
+            timeInfoEl.textContent = `${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}`;
+          }
+          const editBtn = rightWrap.querySelector('.limit-edit-btn');
+          if (editBtn) {
+            editBtn.setAttribute('onclick', `startEditLimit(this.dataset.app, ${lim.limit_minutes})`);
+          }
         }
         
         // Progress bar width update
@@ -1904,9 +1953,10 @@ function renderLimits(limits, statusMap) {
       const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
       const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
       const cat    = s.category || 'entertainment';
+      const safeId = lim.app_name.replace(/[^a-zA-Z0-9]/g, '_');
 
       return `
-        <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
+        <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${safeId}" style="animation: fadeIn 0.3s ease-out;">
           <div class="limit-item-header">
             <div class="limit-item-left">
               <span class="limit-app-icon">${icon}</span>
@@ -1915,7 +1965,7 @@ function renderLimits(limits, statusMap) {
                 <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
               </div>
             </div>
-            <div class="limit-item-right" id="lim-right-${escHtml(lim.app_name)}">
+            <div class="limit-item-right" id="lim-right-${safeId}">
               <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
               <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
@@ -2013,44 +2063,72 @@ async function deleteLimit(appName) {
 // ── Inline Edit Limits ──────────────────────────────────────────
 function startEditLimit(appName, currentLimitMin) {
   editingAppName = appName;
-  const rightWrap = document.getElementById(`lim-right-${appName}`);
-  if (!rightWrap) return;
+  const safeId = appName.replace(/[^a-zA-Z0-9]/g, '_');
+  const cardEl = document.getElementById(`lim-${safeId}`);
+  if (!cardEl) return;
 
   const currentHrs = Math.floor(currentLimitMin / 60);
   const currentMins = Math.round(currentLimitMin % 60);
   
   const escapedAppName = appName.replace(/'/g, "\\'");
 
-  rightWrap.innerHTML = `
-    <div class="limit-edit-inline" style="display: flex; align-items: center; gap: 0.3rem;">
+  cardEl.classList.add('limit-item-editing');
+
+  cardEl.innerHTML = `
+    <div class="limit-edit-panel limit-edit-inline">
+      <div class="limit-edit-title-row">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.1rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">⏰</span>
+          <span class="limit-edit-title">
+            Edit daily limit for <span class="limit-edit-app-name">${escHtml(appName)}</span>
+          </span>
+        </div>
+        <span class="limit-edit-badge">Editor</span>
+      </div>
       
-      <!-- Hours Spin Input -->
-      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
-        <input type="number" class="time-input hrs-input" value="${currentHrs}" min="0" max="23" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="h">
-        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
-          <button type="button" onclick="incrementSiblingInput(this, 23)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
-          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+        <!-- Left: Time Picker -->
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <!-- Hours -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+            <div class="limit-edit-time-box">
+              <input type="number" class="time-input hrs-input" value="${currentHrs}" min="0" max="23" placeholder="0">
+              <div style="display: flex; flex-direction: column; gap: 2px; justify-content: center;">
+                <button type="button" class="limit-edit-spin-btn" onclick="incrementSiblingInput(this, 23)">▲</button>
+                <button type="button" class="limit-edit-spin-btn" onclick="decrementSiblingInput(this, 0)">▼</button>
+              </div>
+            </div>
+            <span class="limit-edit-label">HOURS</span>
+          </div>
+          
+          <span class="limit-edit-colon">:</span>
+          
+          <!-- Minutes -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+            <div class="limit-edit-time-box">
+              <input type="number" class="time-input mins-input" value="${currentMins}" min="0" max="59" placeholder="0">
+              <div style="display: flex; flex-direction: column; gap: 2px; justify-content: center;">
+                <button type="button" class="limit-edit-spin-btn" onclick="incrementSiblingInput(this, 59)">▲</button>
+                <button type="button" class="limit-edit-spin-btn" onclick="decrementSiblingInput(this, 0)">▼</button>
+              </div>
+            </div>
+            <span class="limit-edit-label">MINUTES</span>
+          </div>
+        </div>
+        
+        <!-- Right: Actions -->
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <button type="button" class="limit-edit-cancel-btn" onclick="cancelEditLimit()" title="Cancel editing">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <span>Cancel</span>
+          </button>
+          
+          <button type="button" class="limit-edit-save-btn" onclick="saveEditLimit('${escapedAppName}', this)" title="Save limit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check" style="display: block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Save</span>
+          </button>
         </div>
       </div>
-      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.15rem;">h</span>
-
-      <!-- Minutes Spin Input -->
-      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
-        <input type="number" class="time-input mins-input" value="${currentMins}" min="0" max="59" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="m">
-        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
-          <button type="button" onclick="incrementSiblingInput(this, 59)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
-          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
-        </div>
-      </div>
-      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.25rem;">m</span>
-
-      <!-- Actions -->
-      <button class="limit-edit-save-btn" onclick="saveEditLimit('${escapedAppName}', this)" title="Save limit">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check" style="display: block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-      </button>
-      <button class="limit-edit-cancel-btn" onclick="cancelEditLimit()" title="Cancel editing">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
     </div>
   `;
 }
@@ -2100,8 +2178,7 @@ async function saveEditLimit(appName, buttonEl) {
       // Reset notified cache for this app since the limit was updated
       notifiedToday.delete(appName.toLowerCase());
       localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
-      editingAppName = null;
-      await loadAndRenderLimits();
+      cancelEditLimit();
       checkActiveLimits();
     } else {
       const d = await res.json();
@@ -2233,6 +2310,11 @@ function toggleUserDropdown() {
 
 function openEditAccountModal() {
   document.getElementById('userDropdownMenu').classList.remove('active');
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const themeSelect = document.getElementById('editTheme');
+  if (themeSelect) {
+    themeSelect.value = currentTheme;
+  }
   document.getElementById('editAccountModal').classList.add('active');
 }
 
