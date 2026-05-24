@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 // ── Namespaced localStorage for Multi-Account support ─────────
-const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks'];
+const userSpecificKeys = ['eyeTimerActive', 'eyeTimerEndTime', 'eyeTimerPaused', 'eyeTimerRemainingMs', 'habitChecks', 'app_notifications_enabled'];
 
 function getNamespacedKey(key) {
   if (userSpecificKeys.includes(key)) {
@@ -33,39 +33,45 @@ localStorage.removeItem = function(key) {
 const CAT_COLORS = {
   get study() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#2e7d32' : '#00e676';
+    return isLight ? '#2e7d32' : '#60a5fa'; // dark: soft blue
   },
   get entertainment() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#d84315' : '#ff6e40';
-  },
-  get social() {
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#43a047' : '#40c4ff';
+    return isLight ? '#d84315' : '#fb923c'; // dark: warm orange
   },
   get work() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#f57f17' : '#ffd740';
+    return isLight ? '#f57f17' : '#fbbf24'; // dark: amber
   },
   get other() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    return isLight ? '#651fff' : '#b39ddb';
+    return isLight ? '#651fff' : '#34d399'; // dark: emerald
   }
 };
 
-// ── Theme Toggle ───────────────────────────────────────────────
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
+// ── Theme Toggle & Selection ───────────────────────────────────
+function applyThemeSelection(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
   
   const btn = document.getElementById('themeToggleBtn');
-  if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+
+  // Sync the Edit Profile modal dropdown if it exists
+  const themeSelect = document.getElementById('editTheme');
+  if (themeSelect) {
+    themeSelect.value = theme;
+  }
 
   // Force a re-render of current charts and particles to grab new colors
   loadDashboard();
   loadWeekly(currentWeekOffset);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyThemeSelection(newTheme);
 }
 
 // Load saved theme immediately to prevent flashing
@@ -85,7 +91,7 @@ let doughnutChart = null;
 let weeklyChart   = null;
 let currentWeekOffset  = 0;
 let currentWeeklyData  = null;
-let weeklyChartStyle   = 'bar'; // 'area', 'bar', 'trend'
+let weeklyChartStyle   = 'bar'; // 'area', 'bar'
 let notificationSoundStyle = localStorage.getItem('sound_style') || 'long'; // 'short', 'long', 'alarm'
 
 // ── Eye-care timer ────────────────────────────────────────────
@@ -119,12 +125,12 @@ let eyePaused     = false;
   }
 
   function initParticleArray() {
-    particles = Array.from({ length: 100 }, randomParticle);
+    particles = Array.from({ length: 65 }, randomParticle);
   }
 
   function draw() {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const rgb = isLight ? '0,122,255' : '0,230,118';
+    const rgb = isLight ? '0,122,255' : '167,139,250'; // dark: violet, light: original blue
 
     ctx.clearRect(0, 0, W, H);
     particles.forEach(p => {
@@ -228,6 +234,7 @@ function switchTab(tab) {
           // Delay if welcoming them for the first time
           setTimeout(() => {
             showInstructor(msg, 7500);
+            playNotificationSound();
           }, visitedTabs.has('limits') ? 0 : 4000);
         }
       })
@@ -250,10 +257,10 @@ function fmtMin(minutes) {
 
 function scoreColor(score) {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  if (score >= 80) return isLight ? '#0066cc' : '#00e676';
-  if (score >= 60) return isLight ? '#0088ff' : '#69f0ae';
-  if (score >= 40) return '#ffd740';
-  return '#ff6e40';
+  if (score >= 80) return isLight ? '#0066cc' : '#34d399'; // dark: emerald
+  if (score >= 60) return isLight ? '#0088ff' : '#60a5fa'; // dark: blue
+  if (score >= 40) return '#fbbf24'; // amber
+  return '#f87171'; // soft coral red
 }
 
 
@@ -360,14 +367,14 @@ function updateScoreRing(score, silent = false) {
 function updateStatCards(report, eyeCount) {
   document.getElementById('statTotal').textContent = fmtMin(report.total);
   document.getElementById('statStudy').textContent = fmtMin(report.study);
-  document.getElementById('statEnt').textContent   = fmtMin(report.entertainment);
+  document.getElementById('statEntertainment').textContent = fmtMin(report.entertainment);
   document.getElementById('statEye').textContent   = eyeCount;
 }
 
 // ── Doughnut Chart ───────────────────────────────────────────
 function updateDoughnutChart(report, silent = false) {
-  const data = [report.study, report.entertainment, report.social, report.work, report.other];
-  const labels = ['Study', 'Entertainment', 'Social', 'Work', 'Other'];
+  const data = [report.study, report.entertainment, report.work, report.other];
+  const labels = ['Study', 'Entertainment', 'Work', 'Other'];
   const colors = Object.values(CAT_COLORS);
 
   const ctx = document.getElementById('doughnutChart').getContext('2d');
@@ -400,7 +407,7 @@ function updateDoughnutChart(report, silent = false) {
       type: 'doughnut',
       data: {
         labels: ['No data yet'],
-        datasets: [{ data: [1], backgroundColor: ['rgba(0,230,118,.1)'], borderColor: ['rgba(0,230,118,.2)'], borderWidth: 1 }],
+        datasets: [{ data: [1], backgroundColor: ['rgba(167,139,250,.08)'], borderColor: ['rgba(167,139,250,.18)'], borderWidth: 1 }],
       },
       options: { cutout: '72%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 800 } },
     });
@@ -446,7 +453,7 @@ function updateDoughnutChart(report, silent = false) {
 // ── Ratio Bar ────────────────────────────────────────────────
 function updateRatioBar(report) {
   const study = report.study;
-  const ent = (report.entertainment || 0) + (report.social || 0);
+  const ent = report.entertainment || 0;
   const sum = study + ent;
 
   
@@ -514,7 +521,7 @@ function renderSessions(sessions) {
         <span class="session-cat-dot" style="background:${CAT_COLORS[s.category] || '#888'}"></span>
         <span class="session-app">
           ${escHtml(s.app_name)}
-          ${s.is_auto ? '<span class="auto-badge" style="font-size: 0.68rem; color: var(--green-vivid); background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.2); padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🤖 Auto</span>' : ''}
+          ${s.is_auto ? '<span class="auto-badge" style="font-size: 0.68rem; color: var(--green-vivid); background: var(--green-glow-sm); border: 1px solid var(--green-glow); padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">🤖 Auto</span>' : ''}
         </span>
         <span class="session-cat">${s.category}</span>
         <span class="session-time">${fmtMin(s.minutes)}</span>
@@ -1031,7 +1038,6 @@ function renderWeeklyChart(data) {
     datasets = [
       { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
       { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
-      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
       { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
       { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
     ].map(cat => ({
@@ -1061,7 +1067,10 @@ function renderWeeklyChart(data) {
       y: { 
         stacked: true, 
         grid: { color: gridColor }, 
-        ticks: { color: tickColor, callback: v => fmtMin(v) } 
+        ticks: { color: tickColor, callback: v => fmtMin(v) },
+        afterFit: (scale) => {
+          scale.width = 55;
+        }
       },
     };
   } else if (weeklyChartStyle === 'bar') {
@@ -1069,7 +1078,6 @@ function renderWeeklyChart(data) {
     datasets = [
       { label: 'Study',         key: 'study',         color: CAT_COLORS.study },
       { label: 'Entertainment', key: 'entertainment', color: CAT_COLORS.entertainment },
-      { label: 'Social',        key: 'social',        color: CAT_COLORS.social },
       { label: 'Work',          key: 'work',          color: CAT_COLORS.work },
       { label: 'Other',         key: 'other',         color: CAT_COLORS.other },
     ].map(cat => ({
@@ -1091,67 +1099,11 @@ function renderWeeklyChart(data) {
       y: { 
         stacked: true, 
         grid: { color: gridColor }, 
-        ticks: { color: tickColor, callback: v => fmtMin(v) } 
-      },
-    };
-  } else if (weeklyChartStyle === 'trend') {
-    chartType = 'bar'; // Root type is bar, line layers can override
-    
-    const scoreColorHex = isLight ? '#0066cc' : '#00e676';
-
-    datasets = [
-      {
-        type: 'line',
-        label: 'Digital Balance Score',
-        data: data.map(d => d.total > 0 ? d.balance_score : null), // null so empty days don't fall to 0
-        borderColor: scoreColorHex,
-        borderWidth: 3,
-        fill: false,
-        tension: 0.35,
-        pointRadius: pointRadius > 0 ? pointRadius + 1 : 3,
-        pointHoverRadius: pointRadius > 0 ? pointRadius + 4 : 6,
-        pointBackgroundColor: scoreColorHex,
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-        yAxisID: 'yScore',
-        spanGaps: true, // draw smooth connection between active days
-      },
-      {
-        type: 'bar',
-        label: 'Total Screen Time',
-        data: data.map(d => d.total),
-        backgroundColor: isLight ? 'rgba(87, 121, 156, 0.15)' : 'rgba(165, 214, 167, 0.12)',
-        borderColor: isLight ? 'rgba(87, 121, 156, 0.35)' : 'rgba(165, 214, 167, 0.25)',
-        borderWidth: 1,
-        borderRadius: 4,
-        yAxisID: 'yTime',
-      }
-    ];
-
-    scales = {
-      x: { 
-        grid: { color: gridColor }, 
-        ticks: { 
-          color: tickColor,
-          maxTicksLimit: data.length > 30 ? 10 : (data.length > 7 ? 8 : undefined)
-        } 
-      },
-      yScore: {
-        type: 'linear',
-        position: 'left',
-        min: 0,
-        max: 100,
-        grid: { color: gridColor },
-        ticks: { color: scoreColorHex, stepSize: 20 },
-        title: { display: true, text: 'Wellbeing Score', color: scoreColorHex, font: { weight: 'bold', family: 'Space Grotesk' } }
-      },
-      yTime: {
-        type: 'linear',
-        position: 'right',
-        grid: { drawOnChartArea: false }, // avoid duplicate horizontal lines
         ticks: { color: tickColor, callback: v => fmtMin(v) },
-        title: { display: true, text: 'Screen Time', color: tickColor, font: { weight: 'bold', family: 'Space Grotesk' } }
-      }
+        afterFit: (scale) => {
+          scale.width = 55;
+        }
+      },
     };
   }
 
@@ -1164,6 +1116,14 @@ function renderWeeklyChart(data) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          left: 0,
+          right: 10,
+          top: 0,
+          bottom: 0
+        }
+      },
       onClick: (event, elements) => {
         if (elements && elements.length > 0) {
           const index = elements[0].index;
@@ -1367,7 +1327,6 @@ function selectDay(data, index) {
     const cats = [
       { name: 'Study', key: 'study', emoji: '📖', color: 'var(--cat-study)' },
       { name: 'Entertainment', key: 'entertainment', emoji: '🍿', color: 'var(--cat-ent)' },
-      { name: 'Social', key: 'social', emoji: '💬', color: 'var(--cat-social)' },
       { name: 'Work', key: 'work', emoji: '💼', color: 'var(--cat-work)' },
       { name: 'Other', key: 'other', emoji: '🧩', color: 'var(--cat-other)' },
     ];
@@ -1489,6 +1448,10 @@ function toggleHabit(idx) {
 // INIT
 // ══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.NOTIFICATIONS_ENABLED !== 'undefined') {
+    localStorage.setItem('app_notifications_enabled', window.NOTIFICATIONS_ENABLED === 'false' ? 'false' : 'true');
+  }
+
   loadDashboard();
   // Auto-refresh every 5 minutes
   setInterval(loadDashboard, 5 * 60 * 1000);
@@ -1560,6 +1523,9 @@ function playNotificationSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const now = ctx.currentTime;
 
     if (notificationSoundStyle === 'short') {
@@ -1699,6 +1665,9 @@ function changeSoundStyle(style) {
 
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
+  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
+  if (!appNotifEnabled) return; // Mute completely if notifications are disabled/paused!
+
   if (notifiedToday.has(appName.toLowerCase())) return;  // already notified
   markAppAsNotified(appName);
 
@@ -1716,7 +1685,6 @@ function sendNotification(appName, usedMin, limitMin) {
   }
 
   // If push notifications are supported, enabled in settings, and granted, trigger native notification
-  const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
   if (appNotifEnabled && 'Notification' in window && Notification.permission === 'granted') {
     new Notification(`⏰ Time limit reached: ${appName}`, {
       body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
@@ -1744,55 +1712,25 @@ async function checkActiveLimits() {
 }
 
 // ── Load & render limits tab ────────────────────────────────────
+// ── Load & render limits tab ────────────────────────────────────
 async function initLimits() {
-  // Show notif banner if permission not yet decided
-  const banner = document.getElementById('notifBanner');
-  if (banner && 'Notification' in window && Notification.permission === 'default') {
-    banner.style.display = 'flex';
-  }
-
-  // Update visual status indicators in the Limits section
   const statusText = document.getElementById('notifStatusText');
   const toggleInput = document.getElementById('appNotificationsToggle');
   const guideEl = document.getElementById('notifSetupGuide');
   
   const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
 
-  if ('Notification' in window) {
-    if (Notification.permission === 'granted') {
-      if (toggleInput) toggleInput.checked = appNotifEnabled;
-      if (statusText) {
-        if (appNotifEnabled) {
-          statusText.textContent = '✓ Notifications enabled';
-          statusText.style.color = 'var(--green-vivid)';
-        } else {
-          statusText.textContent = '🔕 Notifications paused';
-          statusText.style.color = 'var(--text-muted)';
-        }
-      }
-      if (guideEl) guideEl.style.display = 'none';
-    } else if (Notification.permission === 'denied') {
-      if (toggleInput) toggleInput.checked = false;
-      if (statusText) {
-        statusText.textContent = '❌ Notifications blocked';
-        statusText.style.color = '#ff5252';
-      }
-      if (guideEl) guideEl.style.display = 'block';
+  if (toggleInput) toggleInput.checked = appNotifEnabled;
+  if (statusText) {
+    if (appNotifEnabled) {
+      statusText.textContent = '✓ Website Alerts & Sound enabled';
+      statusText.style.color = 'var(--green-vivid)';
     } else {
-      if (toggleInput) toggleInput.checked = false;
-      if (statusText) {
-        statusText.textContent = '🔔 Notifications not set';
-        statusText.style.color = 'var(--text-muted)';
-      }
-      if (guideEl) guideEl.style.display = 'none';
-    }
-  } else {
-    if (toggleInput) toggleInput.checked = false;
-    if (statusText) {
-      statusText.textContent = '⚠️ Not supported by browser';
-      statusText.style.color = '#ff5252';
+      statusText.textContent = '🔕 Website Alerts & Sound paused';
+      statusText.style.color = 'var(--text-muted)';
     }
   }
+  if (guideEl) guideEl.style.display = 'none';
 
   await loadAndRenderLimits();
 }
@@ -1803,51 +1741,39 @@ function toggleNotifications(enabled) {
   const statusText = document.getElementById('notifStatusText');
   const guideEl = document.getElementById('notifSetupGuide');
 
-  if (!('Notification' in window)) {
-    showToast('⚠️ Your browser does not support desktop notifications.');
-    if (toggleInput) toggleInput.checked = false;
-    return;
-  }
-
   if (enabled) {
-    Notification.requestPermission().then(perm => {
-      if (perm === 'granted') {
-        localStorage.setItem('app_notifications_enabled', 'true');
-        if (statusText) {
-          statusText.textContent = '✓ Notifications enabled';
-          statusText.style.color = 'var(--green-vivid)';
-        }
-        if (guideEl) guideEl.style.display = 'none';
-        showToast('🔔 Desktop notifications enabled! You\'ll get native popups.');
-        
-        // Trigger a native test notification instantly to prove it really works!
-        new Notification('WellBeingTracker ✅', {
-          body: 'Limit alert notifications are now fully enabled!',
-          icon: '/static/icon.png',
-          badge: '/static/icon.png',
-        });
-      } else if (perm === 'denied') {
-        localStorage.setItem('app_notifications_enabled', 'false');
-        if (statusText) {
-          statusText.textContent = '❌ Notifications blocked';
-          statusText.style.color = '#ff5252';
-        }
-        if (guideEl) guideEl.style.display = 'block';
-        if (toggleInput) toggleInput.checked = false;
-        showToast('⚠️ Notifications blocked in browser settings.');
-      } else {
-        localStorage.setItem('app_notifications_enabled', 'false');
-        if (toggleInput) toggleInput.checked = false;
-      }
+    localStorage.setItem('app_notifications_enabled', 'true');
+    // Clear notified list so that they immediately get alerted for any currently exceeded limits!
+    localStorage.setItem('notified_apps_today', '[]');
+    if (typeof notifiedToday !== 'undefined' && notifiedToday.clear) {
+      notifiedToday.clear();
+    }
+    fetch('/api/user/save_notifications_enabled', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled: true })
     });
+    if (statusText) {
+      statusText.textContent = '✓ Website Alerts & Sound enabled';
+      statusText.style.color = 'var(--green-vivid)';
+    }
+    if (guideEl) guideEl.style.display = 'none';
+    showToast('🔔 Website alerts and sound enabled! (No laptop notifications)');
+    // Instantly check and trigger the custom in-website modal notification
+    checkActiveLimits();
   } else {
     localStorage.setItem('app_notifications_enabled', 'false');
+    fetch('/api/user/save_notifications_enabled', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled: false })
+    });
     if (statusText) {
-      statusText.textContent = '🔕 Notifications paused';
+      statusText.textContent = '🔕 Website Alerts & Sound paused';
       statusText.style.color = 'var(--text-muted)';
     }
     if (guideEl) guideEl.style.display = 'none';
-    showToast('🔕 In-app limit notifications are now paused.');
+    showToast('🔕 Website alerts and sound are now paused.');
   }
 }
 
@@ -1912,54 +1838,168 @@ function renderLimits(limits, statusMap) {
             </div>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">No limits yet. Create one to stay mindful of your daily app time.</p>
             <button class="btn-green" onclick="document.getElementById('limitsForm').scrollIntoView({ behavior: 'smooth' }); setTimeout(() => document.getElementById('limitApp').focus(), 500);" style="padding: 0.5rem 1rem; font-size: 0.85rem; font-weight: 600;">Add your first limit</button>
-
           </div>
     `;
     return;
   }
 
+  // Check if we can do a smooth inline update to prevent flickering/blinking
+  const currentItems = Array.from(list.querySelectorAll('.limit-item'));
+  const currentAppNames = currentItems.map(el => el.id.replace('lim-', ''));
+  const incomingAppNames = limits.map(lim => lim.app_name.replace(/[^a-zA-Z0-9]/g, '_'));
+  
+  const setsEqual = currentAppNames.length === incomingAppNames.length && 
+                    currentAppNames.every((val, index) => val === incomingAppNames[index]);
 
-  list.innerHTML = limits.map(lim => {
-    const key    = lim.app_name.toLowerCase();
-    const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'social' };
-    const pct    = s.percent;
-    const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
-    const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
-    const cat    = s.category || 'social';
+  if (setsEqual) {
+    limits.forEach(lim => {
+      const key = lim.app_name.toLowerCase();
+      const s = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'entertainment' };
+      const pct = s.percent;
+      const safeId = lim.app_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const itemEl = document.getElementById(`lim-${safeId}`);
+      if (itemEl) {
+        // If the item was in editing mode (so its header is missing), restore the full inner HTML
+        if (!itemEl.querySelector('.limit-item-header')) {
+          const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
+          const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+          const cat    = s.category || 'entertainment';
 
-    return `
-      <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${escHtml(lim.app_name)}" style="animation: fadeIn 0.3s ease-out;">
+          itemEl.innerHTML = `
+            <div class="limit-item-header">
+              <div class="limit-item-left">
+                <span class="limit-app-icon">${icon}</span>
+                <div class="limit-app-details">
+                  <span class="limit-app-name">${escHtml(lim.app_name)}</span>
+                  <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+                </div>
+              </div>
+              <div class="limit-item-right" id="lim-right-${safeId}">
+                <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
+                <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                </button>
+                <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
+              </div>
+            </div>
+            <div class="limit-bar-row">
+              <div class="limit-bar-track">
+                <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+              </div>
+              ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
+            </div>
+            <div class="limit-bar-labels">
+              <span>${pct}% used</span>
+              <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
+            </div>
+          `;
+          itemEl.classList.remove('limit-item-editing');
+        }
 
-        <div class="limit-item-header">
-          <div class="limit-item-left">
-            <span class="limit-app-icon">${icon}</span>
-            <div class="limit-app-details">
-              <span class="limit-app-name">${escHtml(lim.app_name)}</span>
-              <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+        // Exceeded class list update
+        if (s.exceeded) {
+          itemEl.classList.add('limit-exceeded');
+        } else {
+          itemEl.classList.remove('limit-exceeded');
+        }
+        
+        // Category badge update
+        const badgeEl = itemEl.querySelector('.tracker-cat-badge');
+        if (badgeEl) {
+          const cat = s.category || 'entertainment';
+          badgeEl.textContent = cat.toUpperCase();
+          badgeEl.className = `tracker-cat-badge auto-cat-${cat}`;
+        }
+        
+        // Time info & edit controls update
+        const rightWrap = itemEl.querySelector('.limit-item-right');
+        if (rightWrap) {
+          const timeInfoEl = rightWrap.querySelector('.limit-time-info');
+          if (timeInfoEl) {
+            timeInfoEl.textContent = `${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}`;
+          }
+          const editBtn = rightWrap.querySelector('.limit-edit-btn');
+          if (editBtn) {
+            editBtn.setAttribute('onclick', `startEditLimit(this.dataset.app, ${lim.limit_minutes})`);
+          }
+        }
+        
+        // Progress bar width update
+        const fillEl = itemEl.querySelector('.limit-bar-fill');
+        if (fillEl) {
+          fillEl.style.width = `${Math.min(100, pct)}%`;
+        }
+        
+        // Warning icon update
+        const barRow = itemEl.querySelector('.limit-bar-row');
+        if (barRow) {
+          const warningEl = barRow.querySelector('.limit-warning-icon');
+          if (s.exceeded) {
+            if (!warningEl) {
+              const span = document.createElement('span');
+              span.className = 'limit-warning-icon';
+              span.textContent = '⚠️';
+              barRow.appendChild(span);
+            }
+          } else {
+            if (warningEl) {
+              warningEl.remove();
+            }
+          }
+        }
+        
+        // Label update
+        const labelsEl = itemEl.querySelector('.limit-bar-labels');
+        if (labelsEl) {
+          labelsEl.innerHTML = `
+            <span>${pct}% used</span>
+            <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
+          `;
+        }
+      }
+    });
+  } else {
+    // Rebuild HTML from scratch
+    list.innerHTML = limits.map(lim => {
+      const key    = lim.app_name.toLowerCase();
+      const s      = statusMap[key] || { used_minutes: 0, percent: 0, exceeded: false, category: 'entertainment' };
+      const pct    = s.percent;
+      const barCol = 'linear-gradient(to right, #00FF87, #ffd740, #ff5252)';
+      const icon   = APP_ICONS[key] || `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+      const cat    = s.category || 'entertainment';
+      const safeId = lim.app_name.replace(/[^a-zA-Z0-9]/g, '_');
+
+      return `
+        <div class="limit-item ${s.exceeded ? 'limit-exceeded' : ''}" id="lim-${safeId}" style="animation: fadeIn 0.3s ease-out;">
+          <div class="limit-item-header">
+            <div class="limit-item-left">
+              <span class="limit-app-icon">${icon}</span>
+              <div class="limit-app-details">
+                <span class="limit-app-name">${escHtml(lim.app_name)}</span>
+                <span class="tracker-cat-badge auto-cat-${cat}">${cat.toUpperCase()}</span>
+              </div>
+            </div>
+            <div class="limit-item-right" id="lim-right-${safeId}">
+              <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
+              <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+              </button>
+              <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
             </div>
           </div>
-          <div class="limit-item-right" id="lim-right-${escHtml(lim.app_name)}">
-            <span class="limit-time-info">${fmtMin(s.used_minutes)} / ${fmtMin(lim.limit_minutes)}</span>
-            <button class="limit-edit-btn" onclick="startEditLimit(this.dataset.app, ${lim.limit_minutes})" data-app="${escHtml(lim.app_name)}" title="Edit limit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px; transition: color 0.2s, background 0.2s; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2" style="display: block;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-            </button>
-            <button class="limit-del-btn" onclick="deleteLimit(this.dataset.app)" data-app="${escHtml(lim.app_name)}" title="Remove limit">✕</button>
+          <div class="limit-bar-row">
+            <div class="limit-bar-track">
+              <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+            </div>
+            ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
           </div>
-        </div>
-        <div class="limit-bar-row">
-          <div class="limit-bar-track">
-            <div class="limit-bar-fill" style="width:${Math.min(100, pct)}%; background:${barCol}"></div>
+          <div class="limit-bar-labels">
+            <span>${pct}% used</span>
+            <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
           </div>
-          ${s.exceeded ? '<span class="limit-warning-icon">⚠️</span>' : ''}
-        </div>
-
-        <div class="limit-bar-labels">
-          <span>${pct}% used</span>
-          <span>${fmtMin(Math.max(0, lim.limit_minutes - s.used_minutes))} remaining</span>
-        </div>
-      </div>`;
-  }).join('');
-
+        </div>`;
+    }).join('');
+  }
 }
 
 // ── App emoji icon map ─────────────────────────────────────────
@@ -2037,44 +2077,72 @@ async function deleteLimit(appName) {
 // ── Inline Edit Limits ──────────────────────────────────────────
 function startEditLimit(appName, currentLimitMin) {
   editingAppName = appName;
-  const rightWrap = document.getElementById(`lim-right-${appName}`);
-  if (!rightWrap) return;
+  const safeId = appName.replace(/[^a-zA-Z0-9]/g, '_');
+  const cardEl = document.getElementById(`lim-${safeId}`);
+  if (!cardEl) return;
 
   const currentHrs = Math.floor(currentLimitMin / 60);
   const currentMins = Math.round(currentLimitMin % 60);
   
   const escapedAppName = appName.replace(/'/g, "\\'");
 
-  rightWrap.innerHTML = `
-    <div class="limit-edit-inline" style="display: flex; align-items: center; gap: 0.3rem;">
+  cardEl.classList.add('limit-item-editing');
+
+  cardEl.innerHTML = `
+    <div class="limit-edit-panel limit-edit-inline">
+      <div class="limit-edit-title-row">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.1rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));">⏰</span>
+          <span class="limit-edit-title">
+            Edit daily limit for <span class="limit-edit-app-name">${escHtml(appName)}</span>
+          </span>
+        </div>
+        <span class="limit-edit-badge">Editor</span>
+      </div>
       
-      <!-- Hours Spin Input -->
-      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
-        <input type="number" class="time-input hrs-input" value="${currentHrs}" min="0" max="23" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="h">
-        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
-          <button type="button" onclick="incrementSiblingInput(this, 23)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
-          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
+        <!-- Left: Time Picker -->
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <!-- Hours -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+            <div class="limit-edit-time-box">
+              <input type="number" class="time-input hrs-input" value="${currentHrs}" min="0" max="23" placeholder="0">
+              <div style="display: flex; flex-direction: column; gap: 2px; justify-content: center;">
+                <button type="button" class="limit-edit-spin-btn" onclick="incrementSiblingInput(this, 23)">▲</button>
+                <button type="button" class="limit-edit-spin-btn" onclick="decrementSiblingInput(this, 0)">▼</button>
+              </div>
+            </div>
+            <span class="limit-edit-label">HOURS</span>
+          </div>
+          
+          <span class="limit-edit-colon">:</span>
+          
+          <!-- Minutes -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+            <div class="limit-edit-time-box">
+              <input type="number" class="time-input mins-input" value="${currentMins}" min="0" max="59" placeholder="0">
+              <div style="display: flex; flex-direction: column; gap: 2px; justify-content: center;">
+                <button type="button" class="limit-edit-spin-btn" onclick="incrementSiblingInput(this, 59)">▲</button>
+                <button type="button" class="limit-edit-spin-btn" onclick="decrementSiblingInput(this, 0)">▼</button>
+              </div>
+            </div>
+            <span class="limit-edit-label">MINUTES</span>
+          </div>
+        </div>
+        
+        <!-- Right: Actions -->
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <button type="button" class="limit-edit-cancel-btn" onclick="cancelEditLimit()" title="Cancel editing">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <span>Cancel</span>
+          </button>
+          
+          <button type="button" class="limit-edit-save-btn" onclick="saveEditLimit('${escapedAppName}', this)" title="Save limit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check" style="display: block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Save</span>
+          </button>
         </div>
       </div>
-      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.15rem;">h</span>
-
-      <!-- Minutes Spin Input -->
-      <div style="display: flex; align-items: center; background: rgba(0,0,0,0.35); border: 1px solid var(--border-glass); border-radius: 6px; padding: 2px 4px; gap: 2px;">
-        <input type="number" class="time-input mins-input" value="${currentMins}" min="0" max="59" style="width: 32px; background: none; border: none; color: white; padding: 0.1rem; font-size: 0.85rem; text-align: center; font-family: inherit; font-weight: 600; outline: none; margin: 0;" placeholder="m">
-        <div style="display: flex; flex-direction: column; gap: 1px; justify-content: center; margin-left: 2px;">
-          <button type="button" onclick="incrementSiblingInput(this, 59)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▲</button>
-          <button type="button" onclick="decrementSiblingInput(this, 0)" style="background: none; border: none; color: var(--text-muted); font-size: 0.6rem; padding: 0 2px; cursor: pointer; line-height: 1; height: 10px; display: flex; align-items: center; justify-content: center; transition: color 0.15s;" onmouseover="this.style.color='var(--green-vivid)'" onmouseout="this.style.color='var(--text-muted)'">▼</button>
-        </div>
-      </div>
-      <span style="color: var(--text-muted); font-size: 0.75rem; margin-right: 0.25rem;">m</span>
-
-      <!-- Actions -->
-      <button class="limit-edit-save-btn" onclick="saveEditLimit('${escapedAppName}', this)" title="Save limit">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check" style="display: block;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-      </button>
-      <button class="limit-edit-cancel-btn" onclick="cancelEditLimit()" title="Cancel editing">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
     </div>
   `;
 }
@@ -2124,8 +2192,7 @@ async function saveEditLimit(appName, buttonEl) {
       // Reset notified cache for this app since the limit was updated
       notifiedToday.delete(appName.toLowerCase());
       localStorage.setItem('notified_apps_today', JSON.stringify(Array.from(notifiedToday)));
-      editingAppName = null;
-      await loadAndRenderLimits();
+      cancelEditLimit();
       checkActiveLimits();
     } else {
       const d = await res.json();
@@ -2257,6 +2324,11 @@ function toggleUserDropdown() {
 
 function openEditAccountModal() {
   document.getElementById('userDropdownMenu').classList.remove('active');
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const themeSelect = document.getElementById('editTheme');
+  if (themeSelect) {
+    themeSelect.value = currentTheme;
+  }
   document.getElementById('editAccountModal').classList.add('active');
 }
 
@@ -2423,19 +2495,20 @@ function handleImagePreview(input) {
     reader.onload = function(e) {
       const previewContainer = document.getElementById('modalAvatarPreview');
       let previewImg = document.getElementById('previewImg');
+      const initials = document.getElementById('previewInitials');
       
       if (!previewImg) {
-        // Replace initials with a new image element
-        const initials = document.getElementById('previewInitials');
-        if (initials) initials.remove();
-        
         previewImg = document.createElement('img');
         previewImg.id = 'previewImg';
         previewImg.className = 'avatar-img';
-        previewContainer.appendChild(previewImg);
+        previewContainer.insertBefore(previewImg, initials);
       }
       
       previewImg.src = e.target.result;
+      previewImg.style.display = 'block';
+      if (initials) {
+        initials.style.display = 'none';
+      }
     };
     reader.readAsDataURL(input.files[0]);
   }
@@ -2601,7 +2674,6 @@ function updateTimerDisplay(totalSecs) {
 const CAT_ICONS = {
   study: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"></path></svg>`,
   entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4"></path><path d="M8 10v4"></path><line x1="15" y1="13" x2="15" y2="13"></line><line x1="18" y1="11" x2="18" y2="11"></line></svg>`,
-  social: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.5A8.38 8.38 0 0 1 4 11.5a8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`,
   work: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
   other: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`
 };
@@ -2610,7 +2682,6 @@ const CAT_ICONS = {
 const CAT_LABELS = {
   study: 'Study',
   entertainment: 'Entertainment',
-  social: 'Social',
   work: 'Work',
   other: 'Other'
 };
@@ -2708,7 +2779,6 @@ async function pollTrackerStatus() {
             let durationStr = totalMin >= 60 ? `${Math.floor(totalMin / 60)}h ${Math.round(totalMin % 60)}m` : `${Math.round(totalMin)}m`;
             let barColor = 'var(--green-vivid)';
             if (app.category === 'entertainment') barColor = 'var(--cat-ent)';
-            else if (app.category === 'social') barColor = 'var(--cat-social)';
             else if (app.category === 'work') barColor = 'var(--cat-work)';
             else if (app.category === 'other') barColor = 'var(--cat-other)';
             
@@ -2772,7 +2842,7 @@ async function pollTrackerStatus() {
               <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; margin-bottom: 0.75rem;">
                 Running this on a remote server (like Render)? Your local tracker needs to know this website's address and credentials to sync data.
               </div>
-              <button class="btn-outline btn-sm" onclick="downloadTrackerConfig()" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 6.6px; background: rgba(0, 230, 118, 0.05); border-color: rgba(0, 230, 118, 0.2);">
+              <button class="btn-outline btn-sm" onclick="downloadTrackerConfig()" style="width: 100%; justify-content: center; font-size: 0.75rem; padding: 0.4rem 0.75rem; display: inline-flex; align-items: center; gap: 6.6px; background: var(--green-glow-sm); border-color: var(--green-glow);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--green-vivid);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span style="color: var(--text-color);">Download tracker_config.json</span>
               </button>
@@ -2785,17 +2855,17 @@ async function pollTrackerStatus() {
       }
     }
 
-    // Auto-refresh Dashboard components if on the Dashboard tab and auto-tracking is active
+    // Auto-refresh Dashboard components if on the Dashboard tab
     const dashboardSection = document.getElementById('section-dashboard');
-    if (dashboardSection && dashboardSection.classList.contains('active') && data.tracker_running) {
+    if (dashboardSection && dashboardSection.classList.contains('active')) {
       const dashDateInput = document.getElementById('dashDate');
       const dateStr = dashDateInput ? dashDateInput.value : null;
       loadDashboard(dateStr, true);
     }
 
-    // Auto-refresh Limits components if on the Limits tab and auto-tracking is active
+    // Auto-refresh Limits components if on the Limits tab
     const limitsSection = document.getElementById('section-limits');
-    if (limitsSection && limitsSection.classList.contains('active') && data.tracker_running) {
+    if (limitsSection && limitsSection.classList.contains('active')) {
       loadAndRenderLimits();
     }
     

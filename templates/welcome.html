@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome · WellBeingTracker</title>
+  <meta name="description" content="Welcome to Digital Well-Being Tracker. Reclaim your focus, track screen time, and build healthier habits." />
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+  <script>
+    (function loadTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/welcome.css') }}?v=1.3" />
+  
+  <!-- Three.js for premium 3D graphics -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.min.js"></script>
+</head>
+<body>
+  <!-- Floating Theme Toggle -->
+  <button id="themeToggleBtn" aria-label="Toggle Light/Dark Mode" onclick="toggleTheme()" class="theme-toggle-floating" title="Toggle Theme">☀️</button>
+  
+  <!-- 3D WebGL Canvas Background -->
+  <canvas id="welcomeCanvas"></canvas>
+
+  <div class="welcome-container" id="welcomeContent">
+    <!-- Centered Logo Widget -->
+    <div class="logo-container">
+      <div class="logo-circle"></div>
+      <div class="logo-icon-wrap">
+        <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <defs>
+            <linearGradient id="logoGradWelcome" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color: var(--welcome-accent);" />
+              <stop offset="100%" style="stop-color: var(--welcome-accent);" />
+            </linearGradient>
+          </defs>
+          <path d="M50,90 C50,90 20,60 20,40 C20,25 35,15 50,35 C65,15 80,25 80,40 C80,60 50,90 50,90 Z" fill="url(#logoGradWelcome)" />
+          <path d="M50,90 C50,90 32,70 32,52 C32,40 42,32 50,48 C58,32 68,40 68,52 C68,70 50,90 50,90 Z" fill="#ffffff" opacity="0.25" />
+          <path d="M50,90 C50,90 42,80 42,68 C42,60 46,55 50,65 C54,55 58,60 58,68 C58,80 50,90 50,90 Z" fill="#ffffff" opacity="0.45" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Branding Text -->
+    <h1 class="welcome-title">WELLBEING TRACKER</h1>
+    <p class="welcome-sub">Your partner in digital balance</p>
+    
+    <div class="credits-container">
+      <div class="credits-content">
+        <p>Track your screen time, set healthy limits, and reclaim your focus.</p>
+        <p>WellBeingTracker helps you build a healthier relationship with your digital life through insightful analytics and gentle nudges.</p>
+        <p>Features include real-time usage tracking, productivity scoring, and customizable goals.</p>
+        <p>Designed with privacy in mind. Your digital habits are analyzed locally.</p>
+        <p>Join us to balance your digital diet and reclaim hours of your day.</p>
+      </div>
+    </div>
+
+    <!-- Get Started Link -->
+    <a href="/login" class="welcome-btn" id="getStartedBtn">Get Started</a>
+  </div>
+
+  <script>
+    // ── Theme Toggling ───────────────────────────────────────────
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) {
+        btn.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+      }
+    });
+
+</script>
+<script src="{{ url_for('static', filename='js/particles.js') }}"></script>
+</body>
+</html>

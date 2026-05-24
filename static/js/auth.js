@@ -13,28 +13,7 @@ document.querySelectorAll('.pwd-toggle').forEach(btn => {
 
 
 // ── Password strength meter (signup only) ─────────────────────
-const pwdInput    = document.getElementById('password');
-const strengthFill  = document.getElementById('strengthFill');
-const strengthLabel = document.getElementById('strengthLabel');
-
-if (pwdInput && strengthFill) {
-  pwdInput.addEventListener('input', () => {
-    const val = pwdInput.value;
-    let level = 0;
-    if (val.length >= 6)  level++;
-    if (val.length >= 10) level++;
-    if (/[A-Z]/.test(val) && /[0-9]/.test(val)) level++;
-    if (/[^A-Za-z0-9]/.test(val)) level++;
-
-    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-    strengthFill.setAttribute('data-level', level || '');
-    strengthFill.style.width = level ? `${level * 25}%` : '0';
-    if (strengthLabel) strengthLabel.textContent = labels[level] || 'Strength';
-
-    const colors = ['', '#ff5252', '#ffd740', '#69f0ae', '#00e676'];
-    strengthFill.style.background = colors[level] || '';
-  });
-}
+const pwdInput = document.getElementById('signupPassword');
 
 // ── Confirm password match hint ────────────────────────────────
 const confirmInput = document.getElementById('confirm');
@@ -98,4 +77,55 @@ if (usernameInput && usernameHint) {
       setTimeout(() => banner.remove(), 500);
     }, 5000);
   }
+});
+
+// ── Theme Toggle & Init for Auth Pages ─────────────────────────
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) {
+    btn.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+  }
+
+  // ── Sliding Panel Logic ────────────────────────────────────────
+  const showSignupBtn = document.getElementById('showSignupBtn');
+  const showLoginBtn  = document.getElementById('showLoginBtn');
+  
+  if (showSignupBtn) {
+    showSignupBtn.addEventListener('click', () => {
+      document.body.setAttribute('data-active-panel', 'signup');
+      // Update URL without reloading
+      window.history.pushState({}, '', '/signup');
+    });
+  }
+  
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', () => {
+      document.body.setAttribute('data-active-panel', 'login');
+      // Update URL without reloading
+      window.history.pushState({}, '', '/login');
+    });
+  }
+
+  // ── Spotlight Hover Effect for Features ────────────────────────
+  const features = document.querySelectorAll('.brand-features li');
+  features.forEach(feature => {
+    feature.addEventListener('mousemove', e => {
+      const rect = feature.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      feature.style.setProperty('--mouse-x', `${x}px`);
+      feature.style.setProperty('--mouse-y', `${y}px`);
+    });
+  });
 });

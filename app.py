@@ -17,7 +17,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from flask_cors import CORS
+from flask_cors import CORS 
 app = Flask(__name__)
 CORS(app)
 
@@ -42,6 +42,14 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=3650)
 app.config['REMEMBER_COOKIE_SECURE'] = False   # set True in production (HTTPS)
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 
+@app.after_request
+def add_header(r):
+    """Prevent caching of static files in development."""
+    r.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
+
 DB_PATH = os.path.join(os.path.dirname(__file__), 'wellbeing.db')
 
 # ─── Flask-Login setup ────────────────────────────────────────────────────────
@@ -51,7 +59,7 @@ login_manager.login_view = 'login'
 login_manager.login_message = ''          # suppress default flash
 
 class User(UserMixin):
-    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None, switch_token=None, sound_style='short'):
+    def __init__(self, id_, username, email, phone=None, bio=None, avatar_url=None, gender=None, switch_token=None, sound_style='short', notifications_enabled='true'):
         self.id           = id_
         self.username     = username
         self.email        = email
@@ -61,6 +69,7 @@ class User(UserMixin):
         self.gender       = gender
         self.switch_token = switch_token
         self.sound_style  = sound_style
+        self.notifications_enabled = notifications_enabled
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -78,13 +87,15 @@ def load_user(user_id):
             u.get('avatar_url'), 
             u.get('gender'), 
             u.get('switch_token'),
-            u.get('sound_style', 'short')
+            u.get('sound_style', 'short'),
+            u.get('notifications_enabled', 'true')
         )
     return None
 
 # ─── Database Initialization ───────────────────────────────────────────────────
 def init_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA journal_mode=WAL')
     c = conn.cursor()
 
     # Users table
@@ -122,6 +133,9 @@ def init_db():
     except: pass
     try:
         c.execute('ALTER TABLE users ADD COLUMN sound_style TEXT DEFAULT "short"')
+    except: pass
+    try:
+        c.execute('ALTER TABLE users ADD COLUMN notifications_enabled TEXT DEFAULT "true"')
     except: pass
 
     # Sessions table (scoped per user)
@@ -170,6 +184,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # ── Migration: Migrate all 'social' category sessions to 'entertainment' ──
+    try:
+        c.execute("UPDATE sessions SET category = 'entertainment' WHERE category = 'social'")
+    except Exception as e:
+        print(f"[-] Migration error: {e}")
+
     conn.commit()
     conn.close()
 
@@ -178,6 +198,7 @@ init_db()
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 def get_db():
     conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA journal_mode=WAL')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -260,7 +281,7 @@ def signup():
                 login_user(user, remember=True)
                 return redirect(url_for('index'))
 
-    return render_template('signup.html', error=error)
+    return render_template('auth.html', active_panel='signup', error=error)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -288,7 +309,7 @@ def login():
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
 
-    return render_template('login.html', error=error)
+    return render_template('auth.html', active_panel='login', error=error)
 
 
 # ─── SMTP CONFIG & OTP SENDER ──────────────────────────────────────────────────
@@ -456,6 +477,13 @@ def logout():
 
 # ─── Main App Routes ───────────────────────────────────────────────────────────
 @app.route('/')
+def welcome():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('welcome.html')
+
+
+@app.route('/dashboard')
 @login_required
 def index():
     token = current_user.switch_token
@@ -499,20 +527,22 @@ def index():
                 pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
                 if not os.path.exists(pythonw_path):
                     pythonw_path = sys.executable
-                subprocess.Popen([pythonw_path, tracker_path], close_fds=True)
+                creationflags = 0x08000000 if sys.platform == "win32" else 0
+                subprocess.Popen([pythonw_path, tracker_path], close_fds=True, creationflags=creationflags)
                 print("[+] Auto-spawned tracker.py silently in the background!")
             except Exception as e:
                 print("[-] Failed to auto-spawn tracker.py:", e)
 
     return render_template('index.html', 
-                           username=current_user.username,
-                           email=current_user.email,
-                           phone=current_user.phone or '',
-                           bio=current_user.bio or '',
-                           avatar_url=current_user.avatar_url or '',
-                           gender=current_user.gender or '',
-                           switch_token=token,
-                           sound_style=current_user.sound_style or 'short')
+                        username=current_user.username,
+                        email=current_user.email,
+                        phone=current_user.phone or '',
+                        bio=current_user.bio or '',
+                        avatar_url=current_user.avatar_url or '',
+                        gender=current_user.gender or '',
+                        switch_token=token,
+                        sound_style=current_user.sound_style or 'short',
+                        notifications_enabled=current_user.notifications_enabled or 'true')
 
 
 @app.route('/api/tracker/authorize', methods=['POST'])
@@ -576,7 +606,8 @@ def local_sync():
             pythonw_path = sys.executable.replace("python.exe", "pythonw.exe")
             if not os.path.exists(pythonw_path):
                 pythonw_path = sys.executable
-            subprocess.Popen([pythonw_path, tracker_path], close_fds=True)
+            creationflags = 0x08000000 if sys.platform == "win32" else 0
+            subprocess.Popen([pythonw_path, tracker_path], close_fds=True, creationflags=creationflags)
             print(f"[+] Synced tracker config and spawned background agent pointing to: {server_url}")
         except Exception as e:
             print("[-] Error spawning tracker after sync:", e)
@@ -663,6 +694,21 @@ def save_sound_style():
     
     conn = get_db()
     conn.execute('UPDATE users SET sound_style=? WHERE id=?', (sound_style, current_user.id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+
+@app.route('/api/user/save_notifications_enabled', methods=['POST'])
+@login_required
+def save_notifications_enabled():
+    data = request.get_json() or {}
+    enabled = data.get('enabled', True)
+    val = 'true' if enabled else 'false'
+    
+    conn = get_db()
+    conn.execute('UPDATE users SET notifications_enabled=? WHERE id=?', (val, current_user.id))
     conn.commit()
     conn.close()
     
@@ -801,11 +847,11 @@ def get_app_category(app_name):
     app_lower = app_name.lower()
     if any(x in app_lower for x in ['vs code', 'visual studio', 'python', 'github', 'sublime', 'pycharm', 'intellij', 'terminal', 'cmd', 'powershell', 'stud', 'learn', 'course', 'coding', 'antigravity']):
         return 'study'
-    elif any(x in app_lower for x in ['youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming', 'microsoft store']):
-
+    elif any(x in app_lower for x in [
+        'youtube', 'netflix', 'spotify', 'vlc', 'steam', 'game', 'play', 'prime video', 'hulu', 'twitch', 'music', 'gaming', 'microsoft store',
+        'chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger'
+    ]):
         return 'entertainment'
-    elif any(x in app_lower for x in ['chrome', 'firefox', 'browser', 'safari', 'instagram', 'twitter', 'facebook', 'reddit', 'discord', 'whatsapp', 'social', 'chat', 'messenger']):
-        return 'social'
     elif any(x in app_lower for x in ['zoom', 'slack', 'teams', 'excel', 'word', 'outlook', 'powerpoint', 'meet', 'skype', 'trello', 'notion']):
         return 'work'
     return 'other'
@@ -822,7 +868,7 @@ def tracker_ping():
         return jsonify({'error': 'Missing fields'}), 400
         
     conn = get_db()
-    user_row = conn.execute('SELECT id, sound_style FROM users WHERE switch_token=?', (token,)).fetchone()
+    user_row = conn.execute('SELECT id, sound_style, notifications_enabled FROM users WHERE switch_token=?', (token,)).fetchone()
     conn.close()
     
     if not user_row:
@@ -922,6 +968,11 @@ def tracker_ping():
             
     conn.close()
 
+    notif_enabled = user_row['notifications_enabled'] if (user_row and 'notifications_enabled' in user_row.keys()) else 'true'
+    if notif_enabled == 'false':
+        limit_info = None
+        exceeded_limits = []
+
     return jsonify({
         'success': True,
         'limit_info': limit_info,
@@ -1001,7 +1052,7 @@ def daily_report():
     ).fetchall()
     
     break_row = conn.execute(
-        "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at)=?",
+        "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at, 'localtime')=?",
         (current_user.id, target_date)
     ).fetchone()
     eye_breaks = break_row['cnt'] if break_row else 0
@@ -1048,7 +1099,7 @@ def weekly_report():
         ).fetchall()
         
         break_row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at)=?",
+            "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at, 'localtime')=?",
             (current_user.id, d)
         ).fetchone()
         eye_breaks = break_row['cnt'] if break_row else 0
@@ -1092,7 +1143,7 @@ def eye_care_count():
     today = date.today().isoformat()
     conn  = get_db()
     row   = conn.execute(
-        "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at)=?",
+        "SELECT COUNT(*) as cnt FROM eye_care_log WHERE user_id=? AND date(logged_at, 'localtime')=?",
         (current_user.id, today)
     ).fetchone()
     conn.close()

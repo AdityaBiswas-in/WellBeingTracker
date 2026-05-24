@@ -7,6 +7,19 @@ import urllib.error
 import sys
 import threading
 import winsound
+import socket
+
+_lock_socket = None
+
+def ensure_single_instance():
+    global _lock_socket
+    try:
+        _lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _lock_socket.bind(('127.0.0.1', 54321))
+    except socket.error:
+        sys.exit(0)
+
+ensure_single_instance()
 
 # Ensure console supports printing Unicode / emojis on Windows without crashing
 if hasattr(sys.stdout, 'reconfigure'):
@@ -158,7 +171,8 @@ def send_ping(server_url, app_name, window_title, switch_token):
         pass
     return None
 
-def send_windows_toast(title, body):
+def send_windows_toast(title, body, sound_style='short'):
+    silent_str = "true" if sound_style == "none" else "false"
     ps_script = f"""
 $xml = [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType, Windows.UI.Notifications, ContentType = WindowsRuntime]::ToastText02)
 $textNodes = $xml.GetElementsByTagName("text")
@@ -167,7 +181,7 @@ $null = $textNodes.Item(1).AppendChild($xml.CreateTextNode("{body}"))
 
 $audioNode = $xml.CreateElement("audio")
 $audioNode.SetAttribute("src", "ms-winsoundevent:Notification.Reminder")
-$audioNode.SetAttribute("silent", "false")
+$audioNode.SetAttribute("silent", "{silent_str}")
 $toastNode = $xml.SelectSingleNode("/toast")
 $null = $toastNode.AppendChild($audioNode)
 
@@ -176,7 +190,14 @@ $toast = [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, 
 """
     try:
         import subprocess
-        subprocess.run(["powershell", "-NoProfile", "-Command", "-"], input=ps_script, encoding='utf-8', capture_output=True)
+        creationflags = 0x08000000 if sys.platform == "win32" else 0
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", "-"],
+            input=ps_script,
+            encoding='utf-8',
+            capture_output=True,
+            creationflags=creationflags
+        )
     except Exception:
         pass
 
@@ -190,68 +211,11 @@ def show_warning_box(app_name, used_min, limit_min, sound_style='short'):
         return f"{mins}m"
 
     print(f"\n[!] LIMIT EXCEEDED WARNING: {app_name} | Used: {fmt_min(used_min)} | Limit: {fmt_min(limit_min)}")
-
-    title = f"⏰ Limit Exceeded: {app_name}"
-    body = f"You've used {fmt_min(used_min)} of {fmt_min(limit_min)} today. Take a break! 🌿🧘‍♂️"
     
-    # 1. Trigger modern native Windows Notification Toast on laptop
-    send_windows_toast(title, body)
-
-    # 2. Trigger standard async system MessageBox dialog as a backup
-    def target():
-        # Play user's preferred notification sound style natively using winsound
-        try:
-            if sound_style == 'short':
-                # ⚡ Standard Chirp
-                winsound.Beep(523, 100)
-                winsound.Beep(1046, 150)
-            elif sound_style == 'long':
-                # 🎵 Calming Zen Chimes (Warm Em7 chord arpeggio)
-                for freq in [330, 392, 494, 659, 988]:
-                    winsound.Beep(freq, 150)
-            elif sound_style == 'alarm':
-                # 🔔 Repeating Chime Alarm (3 double-beeps at 880Hz)
-                for _ in range(3):
-                    winsound.Beep(880, 100)
-                    time.sleep(0.05)
-                    winsound.Beep(880, 100)
-                    time.sleep(0.5)
-            elif sound_style == 'drip':
-                # 💧 Water Droplet
-                winsound.Beep(1200, 80)
-                winsound.Beep(400, 100)
-            elif sound_style == 'ding':
-                # 🛎️ Classic Ding
-                winsound.Beep(2000, 300)
-            elif sound_style == 'synth':
-                # 🎛️ Synth Echo
-                for freq in [600, 500, 400, 300]:
-                    winsound.Beep(freq, 120)
-                    time.sleep(0.08)
-            else:
-                # Fallback: simple double chirp
-                winsound.Beep(800, 100)
-                winsound.Beep(1000, 150)
-        except Exception as e:
-            # Fallback to default alert sound if beep fails
-            try:
-                winsound.PlaySound("SystemAsterisk", winsound.SND_ALIAS | winsound.SND_ASYNC)
-            except Exception:
-                pass
-            
-        msg = (
-            f"You've reached your daily limit for {app_name}!\n\n"
-            f"You've used {fmt_min(used_min)} of your {fmt_min(limit_min)} limit today.\n\n"
-            "It's time to step away, rest your eyes, and get some offline relaxation! 🌿🧘‍♂️"
-        )
-        # 0x30 = MB_ICONWARNING, 0x40000 = MB_TOPMOST
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            msg,
-            f"Limit Exceeded: {app_name} ⏰",
-            0x30 | 0x40000
-        )
-    threading.Thread(target=target, daemon=True).start()
+    # Send desktop toast notification when the user is not in the browser
+    title = f"⏰ Time Limit Reached: {app_name}"
+    body = f"You have used {fmt_min(used_min)} of {fmt_min(limit_min)} limit today. Take a break! 🌿"
+    send_windows_toast(title, body, sound_style)
 
 def interactive_setup():
     print("""
