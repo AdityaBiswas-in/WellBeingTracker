@@ -1,4 +1,8 @@
-    // ── Bokeh Particle Animation ──────
+import sys
+
+content = open(r'c:\Users\adity\OneDrive\AdityaBiswas_Official\GitHub\WellBeingTracker\templates\welcome.html', 'r', encoding='utf-8').read()
+
+new_script = """    // ── Bokeh Particle Animation ──────
     (function initBokehCanvas() {
       const canvas = document.getElementById('welcomeCanvas');
       if (!canvas) return;
@@ -19,13 +23,26 @@
       window.addEventListener('resize', resize);
       resize();
 
+      // ── Dynamic Theme Colors ─────────────────────────────────────
+      let isDark = true;
+      function updateThemeColors() {
+        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+        isDark = (theme === 'dark');
+      }
+      updateThemeColors();
+      const observer = new MutationObserver(() => updateThemeColors());
+      observer.observe(document.documentElement, { attributes: true });
+
       // ── Spawning Particles ────────────────────────────────────────
       const PARTICLE_COUNT = 200;
       const particles = [];
 
+      const colors = ['#00e5ff', '#0099ff', '#ff7b00', '#ff5500', '#00d2ff', '#ff9933'];
+
       for (let i = 0; i < PARTICLE_COUNT; i++) {
         const isSpark = Math.random() > 0.7;
         const depth = 0.1 + Math.random() * 2.4;
+        const color = colors[Math.floor(Math.random() * colors.length)];
         
         particles.push({
           x: Math.random() * width,
@@ -35,36 +52,10 @@
           size: isSpark ? (0.5 + Math.random() * 1.5) : (3 + Math.random() * 20 * depth),
           vx: (Math.random() - 0.5) * (isSpark ? 1.0 : 0.4) * depth,
           vy: (Math.random() - 0.5) * (isSpark ? 1.0 : 0.4) * depth - (Math.random() * 0.3),
-          color: '#ffffff', // Placeholder, updated in updateThemeColors
-          opacity: isSpark ? (0.7 + Math.random() * 0.3) : (0.2 + Math.random() * 0.4)
+          color: color,
+          opacity: isSpark ? (0.5 + Math.random() * 0.5) : (0.05 + Math.random() * 0.25)
         });
       }
-
-      // ── Dynamic Theme Colors ─────────────────────────────────────
-      let isDark = true;
-      let currentColors = [];
-
-      function updateThemeColors() {
-        const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-        isDark = (theme === 'dark');
-        
-        if (isDark) {
-            // Midnight Plum & Vivid Green
-            currentColors = ['#00f260', '#00b046', '#9d4edd', '#72efdd', '#5a189a', '#e0b1cb'];
-        } else {
-            // Light Blue & Ocean Blue
-            currentColors = ['#0066cc', '#0088ff', '#004499', '#66aaff', '#99ccff', '#2e7d32'];
-        }
-
-        // Apply new colors to particles
-        particles.forEach(p => {
-          p.color = currentColors[Math.floor(Math.random() * currentColors.length)];
-        });
-      }
-
-      updateThemeColors();
-      const observer = new MutationObserver(() => updateThemeColors());
-      observer.observe(document.documentElement, { attributes: true });
 
       // ── Interactive Mouse Parallax ───────────────────────────────
       let targetMouseX = 0, targetMouseY = 0;
@@ -104,11 +95,11 @@
         // Draw Bokeh Background Gradient
         const bgGrad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height));
         if (isDark) {
-            bgGrad.addColorStop(0, '#1c103f');
-            bgGrad.addColorStop(1, '#0b0917');
+            bgGrad.addColorStop(0, '#102a43');
+            bgGrad.addColorStop(1, '#061422');
         } else {
-            bgGrad.addColorStop(0, '#e0f0ff');
-            bgGrad.addColorStop(1, '#dbeafe');
+            bgGrad.addColorStop(0, '#336699');
+            bgGrad.addColorStop(1, '#1a3b5c');
         }
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, width, height);
@@ -122,7 +113,7 @@
 
         const warpSpeed = isLeaving ? Math.pow(transitionTime * 4, 3) : 0;
 
-        ctx.globalCompositeOperation = isDark ? 'screen' : 'source-over';
+        ctx.globalCompositeOperation = 'screen';
 
         particles.forEach(p => {
           p.x += p.vx * dt;
@@ -130,7 +121,7 @@
           
           if (isLeaving) {
             p.depth += warpSpeed * 0.05 * dt;
-            if (!p.isSpark) p.size += warpSpeed * 0.5 * dt;
+            if (!p.isSpark) p.size = 3 + Math.random() * 20 * p.depth;
             const dx = p.x - width / 2;
             const dy = p.y - height / 2;
             p.x += dx * warpSpeed * 0.02 * dt;
@@ -185,4 +176,17 @@
       }
 
       requestAnimationFrame(animate);
-    })();
+    })();"""
+
+start_marker = "    // ── 3D Scene Animation (Robust 2D Canvas Implementation) ──────"
+end_marker = "    })();"
+
+start_idx = content.find(start_marker)
+end_idx = content.find(end_marker, start_idx) + len(end_marker)
+
+if start_idx != -1 and end_idx != -1:
+    new_content = content[:start_idx] + new_script + content[end_idx:]
+    open(r'c:\Users\adity\OneDrive\AdityaBiswas_Official\GitHub\WellBeingTracker\templates\welcome.html', 'w', encoding='utf-8').write(new_content)
+    print("Successfully replaced.")
+else:
+    print("Could not find markers.")

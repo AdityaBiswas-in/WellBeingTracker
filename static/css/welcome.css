@@ -1,0 +1,330 @@
+/* ══════════════════════════════════════════════════════════════
+   Welcome Page Styles  ·  Digital Well-Being Tracker
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --welcome-bg: #0b0917;
+  --welcome-text: #e8e4fa;
+  --welcome-text-muted: rgba(160, 154, 197, 0.65);
+  --welcome-accent: #a78bfa;
+  --welcome-accent-glow: rgba(167, 139, 250, 0.35);
+  --welcome-accent-dim: #2d1f6b;
+  --btn-bg-hover: rgba(167, 139, 250, 0.08);
+}
+
+[data-theme="light"] {
+  --welcome-bg: #f0f4f8;
+  --welcome-text: #0a1626;
+  --welcome-text-muted: rgba(33, 53, 77, 0.65);
+  --welcome-accent: #0066cc;
+  --welcome-accent-glow: rgba(0, 102, 204, 0.2);
+  --welcome-accent-dim: #e0f0ff;
+  --btn-bg-hover: rgba(0, 102, 204, 0.05);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Space Grotesk', sans-serif;
+  background-color: var(--welcome-bg);
+  color: var(--welcome-text);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* ── Canvas Background ────────────────────────────────────────── */
+#welcomeCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── Theme Toggle ─────────────────────────────────────────────── */
+.theme-toggle-floating {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: transform 0.2s, background-color 0.2s;
+  color: var(--welcome-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-toggle-floating:hover {
+  background-color: var(--btn-bg-hover);
+  transform: rotate(15deg) scale(1.05);
+}
+
+/* ── Content Layout ───────────────────────────────────────────── */
+.welcome-container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Logo Container ───────────────────────────────────────────── */
+.logo-container {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.logo-circle {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 2px dashed var(--welcome-accent);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: spinDashed 25s linear infinite;
+  transition: border-color 0.4s ease;
+}
+
+.logo-icon-wrap {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  box-shadow: 0 0 20px var(--welcome-accent-glow);
+  transition: box-shadow 0.4s ease;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 8px var(--welcome-accent));
+  transition: filter 0.4s ease;
+}
+
+/* ── Typography ───────────────────────────────────────────────── */
+.welcome-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 3.25rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 0 20px var(--welcome-accent-glow);
+  transition: text-shadow 0.4s ease;
+}
+
+[data-theme="light"] .welcome-title {
+  color: var(--welcome-text);
+  text-shadow: none;
+}
+
+.welcome-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--welcome-text);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin-bottom: 3.5rem;
+  transition: color 0.4s ease;
+}
+
+/* ── Button ───────────────────────────────────────────────────── */
+.welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--welcome-text);
+  border: 1px solid var(--welcome-accent);
+  background: rgba(255, 255, 255, 0.01);
+  padding: 0.85rem 3rem;
+  border-radius: 50px;
+  box-shadow: 0 0 15px var(--welcome-accent-glow);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.02em;
+}
+
+.welcome-btn:hover {
+  background-color: var(--btn-bg-hover);
+  border-color: var(--welcome-accent);
+  box-shadow: 0 0 25px var(--welcome-accent), inset 0 0 10px var(--welcome-accent-glow);
+  transform: translateY(-2px);
+}
+
+.welcome-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes spinDashed {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Responsive adjustments ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .welcome-title {
+    font-size: 2.3rem;
+  }
+  .welcome-sub {
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 2.75rem;
+  }
+  .welcome-btn {
+    padding: 0.75rem 2.5rem;
+    font-size: 0.9rem;
+  }
+  .logo-container {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+  }
+  .logo-icon-wrap {
+    width: 42px;
+    height: 42px;
+  }
+  .logo-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ── Leaving Transitions ──────────────────────────────────────── */
+body.leaving {
+  background-color: #0b0917 !important; /* Fade to deep background color */
+  transition: background-color 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] body.leaving {
+  background-color: #f0f4f8 !important; /* Fade to light background color */
+}
+
+body.leaving .welcome-container {
+  opacity: 0;
+  transform: scale(0.8);
+  filter: blur(12px);
+  transition: opacity 0.65s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.65s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-about {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--welcome-text);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  font-size: 1.05rem;
+  font-weight: 500;
+  max-width: 480px;
+  margin: 1.5rem auto 2rem auto;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+
+/* ── Credits Animation ────────────────────────────────────────── */
+.credits-container {
+  width: 100%;
+  max-width: 480px;
+  height: 100px;
+  margin: 1.5rem auto 2rem auto;
+  position: relative;
+  overflow: hidden;
+  /* Fade out at top and bottom */
+  mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+}
+
+.credits-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: scrollCredits 25s linear infinite;
+  padding-top: 100px; /* start below container */
+  padding-bottom: 100px; /* buffer after last item */
+}
+
+.credits-content p {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--welcome-text);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+@keyframes scrollCredits {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+.credits-container:hover .credits-content {
+  animation-play-state: paused;
+}
+
+/* ── Light Mode Text Adjustments ── */
+[data-theme="light"] .credits-content p {
+  /* In light mode, replace dark smudge with a white glow to stand out against dark particles */
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.9), 0 2px 10px rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .welcome-sub {
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .welcome-title {
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.8);
+}

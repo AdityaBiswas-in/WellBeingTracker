@@ -477,6 +477,13 @@ def logout():
 
 # ─── Main App Routes ───────────────────────────────────────────────────────────
 @app.route('/')
+def welcome():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('welcome.html')
+
+
+@app.route('/dashboard')
 @login_required
 def index():
     token = current_user.switch_token

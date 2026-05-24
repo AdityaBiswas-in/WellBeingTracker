@@ -705,3 +705,67 @@ select.auth-input option {
   .auth-title { font-size: 1.5rem; }
   .brand-headline { font-size: 1.8rem; }
 }
+
+
+/* ── Legacy Support for Forgot/Reset Password Pages ── */
+.auth-wrapper {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-surface);
+  position: relative;
+}
+
+.auth-wrapper .auth-brand {
+  width: 50%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-wrapper .auth-card-wrap {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 10;
+  padding: 2rem;
+}
+
+/* ── Floating Back Button ── */
+.back-btn-floating {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  cursor: pointer;
+  padding: 0.65rem;
+  border-radius: 50%;
+  transition: all 0.2s;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.back-btn-floating:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateX(-3px);
+}
+
+[data-theme="light"] .back-btn-floating {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .back-btn-floating:hover {
+  background: rgba(0, 0, 0, 0.08);
+}

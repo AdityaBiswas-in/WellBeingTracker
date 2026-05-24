@@ -3,5 +3,6 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}\\.venv\\Lib\\site-packages"
   ],
-  "pyrefly.pythonInterpreter": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+  "pyrefly.pythonInterpreter": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+  "liveServer.settings.port": 5501
 }
