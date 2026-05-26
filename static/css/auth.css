@@ -752,8 +752,8 @@ select.auth-input option {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .back-btn-floating:hover {

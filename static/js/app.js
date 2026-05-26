@@ -1663,6 +1663,43 @@ function changeSoundStyle(style) {
 }
 
 
+// ── Wellbeing break suggestions ─────────────────────────────────
+const WELLBEING_SUGGESTIONS = [
+  {
+    type: 'yoga',
+    title: 'Do a Quick Yoga Stretch 🧘‍♀️',
+    description: 'Release tension in your back and neck with a simple 5-minute yoga session.',
+    instruction: 'Try the Child\'s Pose (Balasana) or gentle neck rolls. Keep your breathing slow and deep.',
+    actionUrl: 'https://www.youtube.com/results?search_query=5+minute+yoga+stretch+for+desk+workers',
+    actionText: 'Watch Yoga Video 🎥'
+  },
+  {
+    type: 'song',
+    title: 'Listen to a Relaxing Song 🎵',
+    description: 'Rest your eyes and escape the noise with some soothing tunes.',
+    instruction: 'Listen to Marconi Union\'s "Weightless" (scientifically designed to reduce anxiety) or relax to cozy Lofi beats.',
+    actionUrl: 'https://www.youtube.com/results?search_query=relaxing+lofi+hip+hop+radio+chill+beats',
+    actionText: 'Play Lo-Fi Music 🎧'
+  },
+  {
+    type: 'stretch',
+    title: 'Desktop Decompression 🚶‍♂️',
+    description: 'Get up from your chair, stretch your legs, and roll your shoulders.',
+    instruction: 'Stand up, lock your fingers behind your back and stretch. Look away from all screens.',
+    actionUrl: 'https://www.youtube.com/results?search_query=quick+standing+stretches+desk+workers',
+    actionText: 'Quick Stretching Guide ⚡'
+  },
+  {
+    type: 'breathing',
+    title: 'Try 4-7-8 Breathing 🌬️',
+    description: 'Calm your nervous system and clear your mind with conscious breathing.',
+    instruction: 'Inhale for 4 seconds, hold your breath for 7 seconds, then exhale completely for 8 seconds. Repeat 4 times.',
+    actionUrl: 'https://www.youtube.com/results?search_query=4-7-8+breathing+guided',
+    actionText: 'Guided Breathing Video 🧘‍♂️'
+  }
+];
+
+
 // ── Send a push notification ────────────────────────────────────
 function sendNotification(appName, usedMin, limitMin) {
   const appNotifEnabled = localStorage.getItem('app_notifications_enabled') !== 'false';
@@ -1673,21 +1710,55 @@ function sendNotification(appName, usedMin, limitMin) {
 
   playNotificationSound();
   
-  // Also show the pop-in instructor
-  showInstructor(`You've reached your limit for ${appName}! Time to take a break. 🌿`, 8000);
+  // Pick a random wellbeing suggestion
+  const suggestion = WELLBEING_SUGGESTIONS[Math.floor(Math.random() * WELLBEING_SUGGESTIONS.length)];
+  
+  // Also show the pop-in instructor with the suggestion
+  showInstructor(`You've reached your limit for ${appName}! 🌿 Rose suggests: ${suggestion.title} - ${suggestion.description}`, 12000);
 
   // Show the custom in-website modal popup
   const modal = document.getElementById('limitExceededModal');
   const msgEl = document.getElementById('limitExceededMessage');
   if (modal && msgEl) {
     msgEl.innerHTML = `You've reached your daily limit for <strong>${appName}</strong>!<br/>You’ve used <strong>${fmtMin(usedMin)}</strong> of your <strong>${fmtMin(limitMin)}</strong> limit today. It's time to step away, rest your eyes, and get some offline relaxation! 🧘‍♂️✨`;
+    
+    // Add suggestions box inside the modal
+    let suggestionBox = document.getElementById('limitExceededSuggestions');
+    if (!suggestionBox) {
+      suggestionBox = document.createElement('div');
+      suggestionBox.id = 'limitExceededSuggestions';
+      suggestionBox.className = 'wellbeing-suggestion-box';
+      
+      const doneBtn = modal.querySelector('button.btn-green');
+      if (doneBtn) {
+        modal.querySelector('.modal').insertBefore(suggestionBox, doneBtn);
+      } else {
+        modal.querySelector('.modal').appendChild(suggestionBox);
+      }
+    }
+    
+    suggestionBox.innerHTML = `
+      <div class="wellbeing-suggestion-header">
+        <span>🌿 Rose's Well-being Suggestion</span>
+      </div>
+      <div class="wellbeing-suggestion-title">
+        ${suggestion.title}
+      </div>
+      <div class="wellbeing-suggestion-desc">
+        ${suggestion.description} ${suggestion.instruction}
+      </div>
+      <a href="${suggestion.actionUrl}" target="_blank" class="wellbeing-suggestion-btn">
+        ${suggestion.actionText}
+      </a>
+    `;
+    
     modal.classList.add('open');
   }
 
   // If push notifications are supported, enabled in settings, and granted, trigger native notification
   if (appNotifEnabled && 'Notification' in window && Notification.permission === 'granted') {
     new Notification(`⏰ Time limit reached: ${appName}`, {
-      body: `You’ve used ${fmtMin(usedMin)} of ${fmtMin(limitMin)} today. Take a break! 🌿`,
+      body: `Rose suggests: ${suggestion.title} 🌿`,
       icon: '/static/icon.png',
       badge: '/static/icon.png',
       tag:  `limit-${appName}`,

@@ -283,8 +283,8 @@ body.leaving .welcome-container {
   position: relative;
   overflow: hidden;
   /* Fade out at top and bottom */
-  mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
 }
 
 .credits-content {
