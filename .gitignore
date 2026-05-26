@@ -7,3 +7,12 @@ wellbeing.db
 *.sqlite
 .DS_Store
 .secret_key
+
+# PyInstaller build artifacts
+build/
+dist/
+
+# Local debug and extra database files
+last_otp.txt
+database.db
+
