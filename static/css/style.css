@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Digital Well-Being Tracker  ·  Midnight Plum Theme
+  Digital Well-Being Tracker  ·  Midnight Plum Theme
    ══════════════════════════════════════════════════════════════ */
 
 /* ── Tokens ─────────────────────────────────────────────────── */
@@ -2262,7 +2262,7 @@ input[type=number] {
 }
 
 /* ==========================================================================
-   ── PREMIUM GLASSMORPHIC EDIT MODAL OVERHAUL ──
+  ── PREMIUM GLASSMORPHIC EDIT MODAL OVERHAUL ──
    ========================================================================== */
 .edit-modal {
   background: var(--bg-glass) !important;
