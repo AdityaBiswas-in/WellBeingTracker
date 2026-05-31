@@ -312,16 +312,16 @@ select option {
 
 .score-card { padding: 2rem; display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
 
-.score-ring-wrap { position: relative; width: 160px; height: 160px; }
-.score-ring { width: 160px; height: 160px; transform: rotate(-90deg); }
+.score-ring-wrap { position: relative; width: 200px; height: 200px; }
+.score-ring { width: 200px; height: 200px; transform: rotate(-90deg); }
 .ring-bg   { fill: none; stroke: var(--green-glow); stroke-width: 8; }
 .ring-fill { fill: none; stroke: var(--green-vivid); stroke-width: 8; stroke-linecap: round;
              stroke-dasharray: 314; stroke-dashoffset: 314;
              transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1), stroke .5s ease;
              filter: drop-shadow(0 0 8px var(--green-vivid)); }
 .score-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.score-num { font-family: 'Space Grotesk', sans-serif; font-size: 2.8rem; font-weight: 700; color: var(--green-vivid); line-height: 1; }
-.score-label { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.score-num { font-family: 'Space Grotesk', sans-serif; font-size: 3.5rem; font-weight: 700; color: var(--green-vivid); line-height: 1; }
+.score-label { font-size: .85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
 
 .score-meta { text-align: center; }
 .score-subtitle { color: var(--text-secondary); font-size: .9rem; margin-bottom: .6rem; }
@@ -694,9 +694,9 @@ select.date-input option, .date-input option {
   .form-row        { grid-template-columns: 1fr; }
   .quick-stats     { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .main-container  { padding: 1rem 0.75rem 3rem; }
-  .score-ring-wrap { width: 130px; height: 130px; }
-  .score-ring      { width: 130px; height: 130px; }
-  .score-num       { font-size: 2.2rem; }
+  .score-ring-wrap { width: 160px; height: 160px; }
+  .score-ring      { width: 160px; height: 160px; }
+  .score-num       { font-size: 2.8rem; }
   
   .detail-header-row {
     flex-direction: column;
